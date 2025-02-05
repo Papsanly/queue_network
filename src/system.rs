@@ -58,7 +58,7 @@ impl DiscreteEventSystem {
             let block = self
                 .blocks
                 .get_mut(&block_id)
-                .expect("block must exist because it was in the event queue");
+                .expect("event queue should only contain valid block ids");
             match event_type {
                 EventType::In => block.process_in(&mut self.event_queue, current_time),
                 EventType::Out => {
