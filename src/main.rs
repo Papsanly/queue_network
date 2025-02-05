@@ -10,18 +10,6 @@ use crate::{
 use rand_distr::Exp;
 use std::time::{Duration, Instant};
 
-fn average_queue_length(queue_lengths: &[(Instant, usize)]) -> f64 {
-    let mut total = 0;
-    let mut previous_time = queue_lengths[0].0;
-    let mut previous_length = queue_lengths[0].1;
-    for (time, length) in queue_lengths.iter().skip(1) {
-        total += previous_length * (*time - previous_time).as_secs() as usize;
-        previous_time = *time;
-        previous_length = *length;
-    }
-    total as f64 / (previous_time - queue_lengths[0].0).as_secs_f64()
-}
-
 fn main() {
     let mut system = DiscreteEventSystem::new()
         .add_block(
@@ -70,7 +58,7 @@ fn main() {
                 elapsed_seconds,
                 block.id(),
                 event_type,
-                block.queue_length,
+                block.queue.length,
                 block.rejections
             );
         } else if let Some(block) = block.as_any().downcast_ref::<DisposeBlock>() {
@@ -96,9 +84,9 @@ fn main() {
             println!(
                 "Block: {:?} | Final Queue Length: {:?} | Total Rejections: {:?} | Queue Lengths: {:?}",
                 block.id(),
-                block.queue_length,
+                block.queue.length,
                 block.rejections,
-                average_queue_length(&block.queue_lengths)
+                block.queue.average_length()
             );
         } else if let Some(block) = block.as_any().downcast_ref::<DisposeBlock>() {
             println!(

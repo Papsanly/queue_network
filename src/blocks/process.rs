@@ -12,11 +12,47 @@ use std::{
     time::{Duration, Instant},
 };
 
+#[derive(Default)]
+pub struct Queue {
+    pub length: usize,
+    pub max_length: Option<usize>,
+    lengths: Vec<(Instant, usize)>,
+}
+
+impl Queue {
+    fn from_max_length(max_length: usize) -> Self {
+        Self {
+            length: 0,
+            max_length: Some(max_length),
+            lengths: Vec::new(),
+        }
+    }
+
+    fn enqueue(&mut self, current_time: Instant) {
+        self.length += 1;
+        self.lengths.push((current_time, self.length));
+    }
+
+    fn dequeue(&mut self, current_time: Instant) {
+        self.length -= 1;
+        self.lengths.push((current_time, self.length));
+    }
+
+    pub fn average_length(&self) -> f64 {
+        let mut total = 0.0;
+        for i in 0..self.lengths.len() - 1 {
+            let (start_time, start_length) = self.lengths[i];
+            let (end_time, end_length) = self.lengths[i + 1];
+            total +=
+                (end_time - start_time).as_secs_f64() * (start_length + end_length) as f64 / 2.0;
+        }
+        total / (self.lengths.last().unwrap().0 - self.lengths.first().unwrap().0).as_secs_f64()
+    }
+}
+
 pub struct ProcessBlock<D: Distribution<f64>> {
     pub id: BlockId,
-    pub queue_length: usize,
-    pub max_queue_length: Option<usize>,
-    pub queue_lengths: Vec<(Instant, usize)>,
+    pub queue: Queue,
     pub rejections: usize,
     links: Vec<BlockId>,
     distribution: D,
@@ -66,10 +102,11 @@ impl<D: Distribution<f64>> ProcessBlockBuilder<WithDistribution, D> {
     pub fn build(self) -> ProcessBlock<D> {
         ProcessBlock {
             id: self.id,
-            queue_length: 0,
+            queue: self
+                .max_queue_length
+                .map(Queue::from_max_length)
+                .unwrap_or_default(),
             links: self.links,
-            max_queue_length: self.max_queue_length,
-            queue_lengths: Vec::new(),
             rejections: 0,
             distribution: self
                 .distribution
@@ -112,16 +149,14 @@ impl<D: Distribution<f64> + 'static> Block for ProcessBlock<D> {
     fn init(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {}
 
     fn process_in(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
-        let max_queue_length = self.max_queue_length.unwrap_or(usize::MAX);
-        match self.queue_length {
+        let max_queue_length = self.queue.max_length.unwrap_or(usize::MAX);
+        match self.queue.length {
             0 => {
                 event_queue.push(Event(current_time + self.delay(), self.id, EventType::Out));
-                self.queue_length += 1;
-                self.queue_lengths.push((current_time, self.queue_length));
+                self.queue.enqueue(current_time);
             }
             x if x < max_queue_length => {
-                self.queue_length += 1;
-                self.queue_lengths.push((current_time, self.queue_length));
+                self.queue.enqueue(current_time);
             }
             _ => {
                 self.rejections += 1;
@@ -130,9 +165,8 @@ impl<D: Distribution<f64> + 'static> Block for ProcessBlock<D> {
     }
 
     fn process_out(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
-        if self.queue_length > 0 {
-            self.queue_length -= 1;
-            self.queue_lengths.push((current_time, self.queue_length));
+        if self.queue.length > 0 {
+            self.queue.dequeue(current_time);
             event_queue.push(Event(current_time + self.delay(), self.id, EventType::Out));
         }
     }
