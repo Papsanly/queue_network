@@ -22,6 +22,7 @@ impl DiscreteEventSystem {
         }
     }
 
+    #[allow(unused)]
     pub fn real_time(mut self) -> Self {
         self.real_time = true;
         self
