@@ -10,7 +10,7 @@ use std::{
 pub struct DiscreteEventSystem {
     event_queue: BinaryHeap<Event>,
     real_time: bool,
-    pub(crate) blocks: HashMap<BlockId, Box<dyn Block>>,
+    pub blocks: HashMap<BlockId, Box<dyn Block>>,
 }
 
 impl DiscreteEventSystem {
@@ -55,9 +55,10 @@ impl DiscreteEventSystem {
                 std::thread::sleep(time - current_time);
             }
             current_time = time;
-            let Some(block) = self.blocks.get_mut(&block_id) else {
-                continue;
-            };
+            let block = self
+                .blocks
+                .get_mut(&block_id)
+                .expect("block must exist because it was in the event queue");
             match event_type {
                 EventType::In => block.process_in(&mut self.event_queue, current_time),
                 EventType::Out => {
