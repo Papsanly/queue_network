@@ -166,7 +166,9 @@ impl<D: Distribution<f64> + 'static> Block for ProcessBlock<D> {
     fn process_out(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
         if self.queue.length > 0 {
             self.queue.dequeue(current_time);
-            event_queue.push(Event(current_time + self.delay(), self.id, EventType::Out));
+            if self.queue.length > 0 {
+                event_queue.push(Event(current_time + self.delay(), self.id, EventType::Out));
+            }
         }
     }
 }
