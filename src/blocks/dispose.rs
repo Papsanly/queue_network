@@ -1,5 +1,5 @@
-use super::Block;
-use crate::{BlockId, Event};
+use super::{Block, BlockId};
+use crate::Event;
 use std::{any::Any, collections::BinaryHeap, time::Instant};
 
 #[derive(Default)]
@@ -8,6 +8,10 @@ pub struct DisposeBlock {
 }
 
 impl Block<BlockId> for DisposeBlock {
+    fn id(&self) -> BlockId {
+        BlockId::Dispose
+    }
+
     fn init(&mut self, _event_queue: &mut BinaryHeap<Event<BlockId>>, _current_time: Instant) {}
 
     fn process_in(

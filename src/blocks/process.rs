@@ -1,5 +1,5 @@
-use super::Block;
-use crate::{events::EventType, BlockId, Event};
+use super::{Block, BlockId};
+use crate::{events::EventType, Event};
 use rand::rng;
 use rand_distr::{Distribution, Normal};
 use std::{
@@ -23,6 +23,10 @@ impl ProcessBlock {
 }
 
 impl Block<BlockId> for ProcessBlock {
+    fn id(&self) -> BlockId {
+        BlockId::Process
+    }
+
     fn init(&mut self, _event_queue: &mut BinaryHeap<Event<BlockId>>, _current_time: Instant) {}
 
     fn process_in(&mut self, event_queue: &mut BinaryHeap<Event<BlockId>>, current_time: Instant) {

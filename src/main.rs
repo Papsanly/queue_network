@@ -24,15 +24,15 @@ impl<BlockId: Eq + Hash + 'static> DiscreteEventSystem<BlockId> {
         }
     }
 
-    fn add_block<T: Block<BlockId> + 'static>(mut self, block_id: BlockId, block: T) -> Self {
-        self.blocks.insert(block_id, Box::new(block));
+    fn add_block<T: Block<BlockId> + 'static>(mut self, block: T) -> Self {
+        self.blocks.insert(block.id(), Box::new(block));
         self
     }
 
     fn simulate(
         &mut self,
         duration: Duration,
-        on_simulation_step: impl Fn(BlockId, &dyn Block<BlockId>, EventType),
+        on_simulation_step: impl Fn(&dyn Block<BlockId>, EventType),
     ) {
         let start = Instant::now();
         let end = start + duration;
@@ -56,39 +56,39 @@ impl<BlockId: Eq + Hash + 'static> DiscreteEventSystem<BlockId> {
                 EventType::In => block.process_in(&mut self.event_queue, current_time),
                 EventType::Out => block.process_out(&mut self.event_queue, current_time),
             }
-            on_simulation_step(block_id, block.as_ref(), event_type);
+            on_simulation_step(block.as_ref(), event_type);
         }
     }
 }
 
-#[derive(Eq, PartialEq, Hash, Debug, Copy, Clone)]
-enum BlockId {
-    Create,
-    Process,
-    Dispose,
-}
-
 fn main() {
     let mut system = DiscreteEventSystem::new()
-        .add_block(BlockId::Create, CreateBlock::default())
-        .add_block(BlockId::Process, ProcessBlock::default())
-        .add_block(BlockId::Dispose, DisposeBlock::default());
+        .add_block(CreateBlock::default())
+        .add_block(ProcessBlock::default())
+        .add_block(DisposeBlock::default());
 
-    system.simulate(Duration::from_secs(100), |block_id, block, event_type| {
+    system.simulate(Duration::from_secs(100), |block, event_type| {
         if let Some(block) = block.as_any().downcast_ref::<CreateBlock>() {
             println!(
                 "Block: {:?} | Event: {:?} | Created Events: {:?}",
-                block_id, event_type, block.created_events
+                block.id(),
+                event_type,
+                block.created_events
             );
         } else if let Some(block) = block.as_any().downcast_ref::<ProcessBlock>() {
             println!(
                 "Block: {:?} | Event: {:?} | Queue Length: {:?} | Rejections: {:?}",
-                block_id, event_type, block.queue_length, block.rejections
+                block.id(),
+                event_type,
+                block.queue_length,
+                block.rejections
             );
         } else if let Some(block) = block.as_any().downcast_ref::<DisposeBlock>() {
             println!(
                 "Block: {:?} | Event: {:?} | Disposed Events: {:?}",
-                block_id, event_type, block.disposed_events
+                block.id(),
+                event_type,
+                block.disposed_events
             );
         }
     });

@@ -1,5 +1,5 @@
-use super::Block;
-use crate::{events::EventType, BlockId, Event};
+use super::{Block, BlockId};
+use crate::{events::EventType, Event};
 use rand::rng;
 use rand_distr::{Distribution, Normal};
 use std::{
@@ -20,6 +20,10 @@ impl CreateBlock {
 }
 
 impl Block<BlockId> for CreateBlock {
+    fn id(&self) -> BlockId {
+        BlockId::Create
+    }
+
     fn init(&mut self, event_queue: &mut BinaryHeap<Event<BlockId>>, current_time: Instant) {
         event_queue.push(Event(current_time, BlockId::Create, EventType::Out));
     }
