@@ -84,6 +84,10 @@ impl<D: Distribution<f64> + 'static> Block for CreateBlock<D> {
         self.id
     }
 
+    fn links(&self) -> &[BlockId] {
+        &self.links
+    }
+
     fn init(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
         event_queue.push(Event(current_time, self.id, EventType::Out));
     }
@@ -91,9 +95,6 @@ impl<D: Distribution<f64> + 'static> Block for CreateBlock<D> {
     fn process_in(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {}
 
     fn process_out(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
-        for link in &self.links {
-            event_queue.push(Event(current_time, link, EventType::In));
-        }
         event_queue.push(Event(current_time + self.delay(), self.id, EventType::Out));
         self.created_events += 1;
     }

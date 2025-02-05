@@ -59,7 +59,13 @@ impl DiscreteEventSystem {
             };
             match event_type {
                 EventType::In => block.process_in(&mut self.event_queue, current_time),
-                EventType::Out => block.process_out(&mut self.event_queue, current_time),
+                EventType::Out => {
+                    block.process_out(&mut self.event_queue, current_time);
+                    for link in block.links() {
+                        self.event_queue
+                            .push(Event(current_time, link, EventType::In));
+                    }
+                }
             }
             on_simulation_step(current_time, block.as_ref(), event_type);
         }

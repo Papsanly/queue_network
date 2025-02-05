@@ -105,6 +105,10 @@ impl<D: Distribution<f64> + 'static> Block for ProcessBlock<D> {
         self.id
     }
 
+    fn links(&self) -> &[BlockId] {
+        &self.links
+    }
+
     fn init(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {}
 
     fn process_in(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
@@ -126,9 +130,6 @@ impl<D: Distribution<f64> + 'static> Block for ProcessBlock<D> {
     }
 
     fn process_out(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
-        for link in &self.links {
-            event_queue.push(Event(current_time, link, EventType::In));
-        }
         if self.queue_length > 0 {
             self.queue_length -= 1;
             self.queue_lengths.push((current_time, self.queue_length));

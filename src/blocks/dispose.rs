@@ -30,6 +30,10 @@ impl Block for DisposeBlock {
         self.id
     }
 
+    fn links(&self) -> &[BlockId] {
+        &[]
+    }
+
     fn init(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {}
 
     fn process_in(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {

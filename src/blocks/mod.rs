@@ -13,6 +13,7 @@ pub type BlockId = &'static str;
 
 pub trait Block: AsAny {
     fn id(&self) -> BlockId;
+    fn links(&self) -> &[BlockId];
     fn init(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant);
     fn process_in(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant);
     fn process_out(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant);
