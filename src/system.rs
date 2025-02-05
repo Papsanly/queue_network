@@ -35,7 +35,7 @@ impl DiscreteEventSystem {
     pub fn simulate(
         &mut self,
         duration: Duration,
-        on_simulation_step: impl Fn(&dyn Block, EventType),
+        on_simulation_step: impl Fn(Instant, &dyn Block, EventType),
     ) {
         let start = Instant::now();
         let end = start + duration;
@@ -61,7 +61,7 @@ impl DiscreteEventSystem {
                 EventType::In => block.process_in(&mut self.event_queue, current_time),
                 EventType::Out => block.process_out(&mut self.event_queue, current_time),
             }
-            on_simulation_step(block.as_ref(), event_type);
+            on_simulation_step(current_time, block.as_ref(), event_type);
         }
     }
 }

@@ -24,7 +24,6 @@ fn average_queue_length(queue_lengths: &[(Instant, usize)]) -> f64 {
 
 fn main() {
     let mut system = DiscreteEventSystem::new()
-        .real_time()
         .add_block(
             CreateBlock::builder("create")
                 .distribution(Exp::new(0.5).unwrap())
@@ -54,17 +53,21 @@ fn main() {
         )
         .add_block(DisposeBlock::new("dispose"));
 
-    system.simulate(Duration::from_secs(15), |block, event_type| {
+    let start_time = Instant::now();
+    system.simulate(Duration::from_secs(1000), |instant, block, event_type| {
+        let elapsed_seconds = (instant - start_time).as_secs_f64();
         if let Some(block) = block.as_any().downcast_ref::<CreateBlock<Exp<f64>>>() {
             println!(
-                "Block: {:?} | Event: {:?} | Created Events: {:?}",
+                "Elapsed Time: {:.3} | Block: {:?} | Event: {:?} | Created Events: {:?}",
+                elapsed_seconds,
                 block.id(),
                 event_type,
                 block.created_events
             );
         } else if let Some(block) = block.as_any().downcast_ref::<ProcessBlock<Exp<f64>>>() {
             println!(
-                "Block: {:?} | Event: {:?} | Queue Length: {:?} | Rejections: {:?}",
+                "Elapsed Time: {:.3} | Block: {:?} | Event: {:?} | Queue Length: {:?} | Rejections: {:?}",
+                elapsed_seconds,
                 block.id(),
                 event_type,
                 block.queue_length,
@@ -72,7 +75,8 @@ fn main() {
             );
         } else if let Some(block) = block.as_any().downcast_ref::<DisposeBlock>() {
             println!(
-                "Block: {:?} | Event: {:?} | Disposed Events: {:?}",
+                "Elapsed Time: {:.3} | Block: {:?} | Event: {:?} | Disposed Events: {:?}",
+                elapsed_seconds,
                 block.id(),
                 event_type,
                 block.disposed_events
