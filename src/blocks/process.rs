@@ -40,13 +40,16 @@ impl Queue {
 
     pub fn average_length(&self) -> f64 {
         let mut total = 0.0;
-        for i in 0..self.lengths.len() - 1 {
-            let (start_time, start_length) = self.lengths[i];
-            let (end_time, end_length) = self.lengths[i + 1];
-            total +=
-                (end_time - start_time).as_secs_f64() * (start_length + end_length) as f64 / 2.0;
+        let mut iter = self.lengths.iter();
+        let (mut current_time, _) = iter
+            .next()
+            .expect("queue lengths must contain at least one element");
+        let start_time = current_time;
+        for &(time, length) in iter {
+            total += (time - current_time).as_secs_f64() * length as f64;
+            current_time = time;
         }
-        total / (self.lengths.last().unwrap().0 - self.lengths.first().unwrap().0).as_secs_f64()
+        total / (current_time - start_time).as_secs_f64()
     }
 }
 
