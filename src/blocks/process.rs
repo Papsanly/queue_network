@@ -15,7 +15,7 @@ use std::{
 #[derive(Default)]
 pub struct Queue {
     pub length: usize,
-    pub max_length: Option<usize>,
+    pub capacity: Option<usize>,
     lengths: Vec<(Instant, usize)>,
 }
 
@@ -23,7 +23,7 @@ impl Queue {
     fn from_max_length(max_length: usize) -> Self {
         Self {
             length: 0,
-            max_length: Some(max_length),
+            capacity: Some(max_length),
             lengths: Vec::new(),
         }
     }
@@ -149,13 +149,12 @@ impl<D: Distribution<f64> + 'static> Block for ProcessBlock<D> {
     fn init(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {}
 
     fn process_in(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
-        let max_queue_length = self.queue.max_length.unwrap_or(usize::MAX);
         match self.queue.length {
             0 => {
                 event_queue.push(Event(current_time + self.delay(), self.id, EventType::Out));
                 self.queue.enqueue(current_time);
             }
-            x if x < max_queue_length => {
+            x if x < self.queue.capacity.unwrap_or(usize::MAX) => {
                 self.queue.enqueue(current_time);
             }
             _ => {
