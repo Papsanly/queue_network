@@ -20,10 +20,10 @@ pub struct Queue {
 }
 
 impl Queue {
-    fn from_max_length(max_length: usize) -> Self {
+    fn from_capacity(capacity: usize) -> Self {
         Self {
             length: 0,
-            capacity: Some(max_length),
+            capacity: Some(capacity),
             lengths: Vec::new(),
         }
     }
@@ -39,6 +39,11 @@ impl Queue {
     }
 
     pub fn average_length(&self) -> f64 {
+        let (total, end_time, start_time) = self.total_weighted_time();
+        total / (end_time - start_time).as_secs_f64()
+    }
+
+    pub fn total_weighted_time(&self) -> (f64, Instant, Instant) {
         let mut total = 0.0;
         let mut iter = self.lengths.iter();
         let (mut current_time, _) = iter
@@ -49,7 +54,7 @@ impl Queue {
             total += (time - current_time).as_secs_f64() * length as f64;
             current_time = time;
         }
-        total / (current_time - start_time).as_secs_f64()
+        (total, current_time, start_time)
     }
 }
 
@@ -57,6 +62,7 @@ pub struct ProcessBlock<D: Distribution<f64>> {
     pub id: BlockId,
     pub queue: Queue,
     pub rejections: usize,
+    pub processed: usize,
     links: Vec<BlockId>,
     distribution: D,
 }
@@ -107,10 +113,11 @@ impl<D: Distribution<f64>> ProcessBlockBuilder<WithDistribution, D> {
             id: self.id,
             queue: self
                 .max_queue_length
-                .map(Queue::from_max_length)
+                .map(Queue::from_capacity)
                 .unwrap_or_default(),
             links: self.links,
             rejections: 0,
+            processed: 0,
             distribution: self
                 .distribution
                 .expect("distribution is Some because builder state is WithDistribution"),
@@ -169,9 +176,13 @@ impl<D: Distribution<f64> + 'static> Block for ProcessBlock<D> {
     fn process_out(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
         match self.queue.length {
             0 => {}
-            1 => self.queue.dequeue(current_time),
+            1 => {
+                self.queue.dequeue(current_time);
+                self.processed += 1;
+            }
             _ => {
                 self.queue.dequeue(current_time);
+                self.processed += 1;
                 event_queue.push(Event(current_time + self.delay(), self.id, EventType::Out));
             }
         }

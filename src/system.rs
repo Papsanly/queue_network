@@ -46,15 +46,14 @@ impl DiscreteEventSystem {
             block.init(&mut self.event_queue, current_time);
         }
 
-        while current_time < end {
-            let Event(time, block_id, event_type) = match self.event_queue.pop() {
-                Some(time) => time,
-                None => break,
-            };
+        while let Some(Event(time, block_id, event_type)) = self.event_queue.pop() {
             if self.real_time {
                 std::thread::sleep(time - current_time);
             }
             current_time = time;
+            if current_time >= end {
+                break;
+            }
             let block = self
                 .blocks
                 .get_mut(&block_id)
