@@ -28,7 +28,7 @@ impl CreateBlockBuilder<true> {
     pub fn build(self) -> CreateBlock {
         CreateBlock {
             id: self.id,
-            stats: CreateBlockStats::default(),
+            created_events: 0,
             links: self.links,
             distribution: self
                 .distribution
@@ -44,14 +44,15 @@ impl<const WITH_DISTRIBUTION: bool> CreateBlockBuilder<WITH_DISTRIBUTION> {
     }
 }
 
-#[derive(Default, Debug)]
+#[allow(unused)]
+#[derive(Debug)]
 pub struct CreateBlockStats {
     pub created_events: usize,
 }
 
 pub struct CreateBlock {
     pub id: BlockId,
-    pub stats: CreateBlockStats,
+    pub created_events: usize,
     pub links: Vec<BlockId>,
     distribution: Distribution,
 }
@@ -71,8 +72,10 @@ impl CreateBlock {
 }
 
 impl Stats<CreateBlockStats> for CreateBlock {
-    fn stats(&self) -> &CreateBlockStats {
-        &self.stats
+    fn stats(&self) -> CreateBlockStats {
+        CreateBlockStats {
+            created_events: self.created_events,
+        }
     }
 }
 
@@ -93,6 +96,6 @@ impl BlockTrait for CreateBlock {
 
     fn process_out(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
         event_queue.push(Event(current_time + self.delay(), self.id, EventType::Out));
-        self.stats.created_events += 1;
+        self.created_events += 1;
     }
 }

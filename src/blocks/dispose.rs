@@ -4,28 +4,31 @@ use crate::{
 };
 use std::{collections::BinaryHeap, time::Instant};
 
-#[derive(Default, Debug)]
+#[allow(unused)]
+#[derive(Debug)]
 pub struct DisposeBlockStats {
     pub disposed_events: usize,
 }
 
 pub struct DisposeBlock {
     pub id: BlockId,
-    pub stats: DisposeBlockStats,
+    pub disposed_events: usize,
 }
 
 impl DisposeBlock {
     pub fn new(id: BlockId) -> Self {
         Self {
             id,
-            stats: DisposeBlockStats::default(),
+            disposed_events: 0,
         }
     }
 }
 
 impl Stats<DisposeBlockStats> for DisposeBlock {
-    fn stats(&self) -> &DisposeBlockStats {
-        &self.stats
+    fn stats(&self) -> DisposeBlockStats {
+        DisposeBlockStats {
+            disposed_events: self.disposed_events,
+        }
     }
 }
 
@@ -41,7 +44,7 @@ impl BlockTrait for DisposeBlock {
     fn init(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {}
 
     fn process_in(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {
-        self.stats.disposed_events += 1;
+        self.disposed_events += 1;
     }
 
     fn process_out(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {}

@@ -17,8 +17,8 @@ mod process;
 
 pub type BlockId = &'static str;
 
-pub trait Stats<T: ?Sized> {
-    fn stats(&self) -> &T;
+pub trait Stats<T> {
+    fn stats(&self) -> T;
 }
 
 pub trait BlockTrait {
@@ -73,10 +73,10 @@ macro_rules! impl_block {
             }
         )*
 
-        impl Stats<dyn Debug + 'static> for Block {
-            fn stats(&self) -> &(dyn Debug + 'static) {
+        impl Stats<Box<dyn Debug>> for Block {
+            fn stats(&self) -> Box<dyn Debug> {
                 match self {
-                    $(Block::$name(block) => block.stats(),)*
+                    $(Block::$name(block) => Box::new(block.stats()),)*
                 }
             }
         }
