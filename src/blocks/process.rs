@@ -12,6 +12,7 @@ use std::{
 pub struct Queue {
     pub length: usize,
     pub capacity: Option<usize>,
+    pub processed: usize,
     lengths: Vec<(Instant, usize)>,
 }
 
@@ -20,6 +21,7 @@ impl Queue {
         Self {
             length: 0,
             capacity: Some(capacity),
+            processed: 0,
             lengths: Vec::new(),
         }
     }
@@ -31,15 +33,8 @@ impl Queue {
 
     fn dequeue(&mut self, current_time: Instant) {
         self.length -= 1;
+        self.processed += 1;
         self.lengths.push((current_time, self.length));
-    }
-
-    fn duration(&self) -> Duration {
-        self.lengths.last().unwrap().0 - self.lengths.first().unwrap().0
-    }
-
-    pub fn average_length(&self) -> f32 {
-        self.total_waited_time() / self.duration().as_secs_f32()
     }
 
     pub fn total_waited_time(&self) -> f32 {
@@ -54,12 +49,23 @@ impl Queue {
         }
         total
     }
+
+    pub fn average_waited_time(&self) -> f32 {
+        self.total_waited_time() / self.processed as f32
+    }
+
+    fn duration(&self) -> Duration {
+        self.lengths.last().unwrap().0 - self.lengths.first().unwrap().0
+    }
+
+    pub fn average_length(&self) -> f32 {
+        self.total_waited_time() / self.duration().as_secs_f32()
+    }
 }
 
 #[derive(Default, Debug)]
 pub struct ProcessBlockStats {
     pub rejections: usize,
-    pub processed: usize,
 }
 
 pub struct ProcessBlock {
@@ -171,11 +177,9 @@ impl BlockTrait for ProcessBlock {
             0 => {}
             1 => {
                 self.queue.dequeue(current_time);
-                self.stats.processed += 1;
             }
             _ => {
                 self.queue.dequeue(current_time);
-                self.stats.processed += 1;
                 event_queue.push(Event(current_time + self.delay(), self.id, EventType::Out));
             }
         }
