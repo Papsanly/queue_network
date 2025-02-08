@@ -105,11 +105,9 @@ impl<const WITH_DISTRIBUTION: bool> ProcessBlockBuilder<WITH_DISTRIBUTION> {
         self
     }
 
-    pub fn max_queue_length(self, max_queue_length: usize) -> Self {
-        ProcessBlockBuilder {
-            max_queue_length: Some(max_queue_length),
-            ..self
-        }
+    pub fn max_queue_length(mut self, max_queue_length: usize) -> Self {
+        self.max_queue_length = Some(max_queue_length);
+        self
     }
 }
 
