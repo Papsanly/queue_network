@@ -34,23 +34,25 @@ impl Queue {
         self.lengths.push((current_time, self.length));
     }
 
-    pub fn average_length(&self) -> f64 {
-        let (total, end_time, start_time) = self.total_weighted_time();
-        total / (end_time - start_time).as_secs_f64()
+    fn duration(&self) -> Duration {
+        self.lengths.last().unwrap().0 - self.lengths.first().unwrap().0
     }
 
-    pub fn total_weighted_time(&self) -> (f64, Instant, Instant) {
+    pub fn average_length(&self) -> f32 {
+        self.total_waited_time() / self.duration().as_secs_f32()
+    }
+
+    pub fn total_waited_time(&self) -> f32 {
         let mut total = 0.0;
         let mut iter = self.lengths.iter();
         let (mut current_time, _) = iter
             .next()
             .expect("queue lengths must contain at least one element");
-        let start_time = current_time;
         for &(time, length) in iter {
-            total += (time - current_time).as_secs_f64() * length as f64;
+            total += (time - current_time).as_secs_f32() * length as f32;
             current_time = time;
         }
-        (total, current_time, start_time)
+        total
     }
 }
 
