@@ -4,13 +4,13 @@ mod system;
 
 use crate::{
     blocks::{BlockTrait, CreateBlock, DisposeBlock, ProcessBlock, Stats},
-    system::DiscreteEventSystem,
+    system::QueueNetwork,
 };
 use rand_distr::Exp;
 use std::time::{Duration, Instant};
 
 fn main() {
-    let mut system = DiscreteEventSystem::new()
+    let mut network = QueueNetwork::new()
         .add_block(
             CreateBlock::builder("create")
                 .distribution(Exp::new(0.5).unwrap())
@@ -41,7 +41,7 @@ fn main() {
         .add_block(DisposeBlock::new("dispose"));
 
     let start_time = Instant::now();
-    system.simulate(Duration::from_secs(1000), |instant, block, event_type| {
+    network.simulate(Duration::from_secs(1000), |instant, block, event_type| {
         println!(
             "Elapsed Time: {:.3} | Event: {:?} | Block: {} | {:?}",
             (instant - start_time).as_secs_f32(),
@@ -52,7 +52,7 @@ fn main() {
     });
 
     println!("Final Simulation State:");
-    for block in system.blocks.values() {
+    for block in network.blocks.values() {
         println!("Block: {} | {:?}", block.id(), block.stats());
     }
 }

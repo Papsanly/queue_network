@@ -79,7 +79,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "queue_system"
+name = "queue_network"
 version = "0.1.0"
 dependencies = [
  "rand",

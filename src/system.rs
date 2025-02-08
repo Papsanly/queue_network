@@ -7,13 +7,13 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub struct DiscreteEventSystem {
+pub struct QueueNetwork {
     event_queue: BinaryHeap<Event>,
     real_time: bool,
     pub blocks: HashMap<BlockId, Block>,
 }
 
-impl DiscreteEventSystem {
+impl QueueNetwork {
     pub fn new() -> Self {
         Self {
             event_queue: BinaryHeap::new(),
