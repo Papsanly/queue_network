@@ -52,7 +52,13 @@ fn main() {
     });
 
     println!("Final Simulation State:");
-    for block in network.blocks.values() {
+    let mut blocks = network.blocks.values().collect::<Vec<_>>();
+    blocks.sort_by_key(|block| match block.id() {
+        "create" => "0".to_string(),
+        "dispose" => "2".to_string(),
+        _ => "1".to_string() + block.id(),
+    });
+    for block in blocks {
         println!("Block: {} | {:?}", block.id(), block.stats());
     }
 }
