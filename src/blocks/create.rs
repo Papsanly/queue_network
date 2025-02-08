@@ -1,55 +1,34 @@
 use crate::{
-    any::AsAny,
-    blocks::{Block, BlockId},
+    blocks::{BlockId, BlockTrait, Distribution, Stats},
     events::{Event, EventType},
 };
-use rand::rng;
-use rand_distr::Distribution;
+use rand::{rng, Rng};
 use std::{
-    any::Any,
     collections::BinaryHeap,
-    marker::PhantomData,
     time::{Duration, Instant},
 };
 
-pub struct CreateBlock<D: Distribution<f64>> {
-    pub id: BlockId,
-    pub created_events: usize,
-    pub links: Vec<BlockId>,
-    distribution: D,
-}
-
-pub struct CreateBlockBuilder<State, D: Distribution<f64>> {
-    _p: PhantomData<State>,
+pub struct CreateBlockBuilder<const WITH_DISTRIBUTION: bool> {
     id: BlockId,
-    distribution: Option<D>,
     links: Vec<BlockId>,
+    distribution: Option<Distribution>,
 }
 
-pub struct WithDistribution;
-pub struct WithoutDistribution;
-
-impl<D: Distribution<f64>> CreateBlockBuilder<WithoutDistribution, D> {
-    pub fn distribution(self, distribution: D) -> CreateBlockBuilder<WithDistribution, D> {
+impl CreateBlockBuilder<false> {
+    pub fn distribution(self, distribution: impl Into<Distribution>) -> CreateBlockBuilder<true> {
         CreateBlockBuilder {
-            _p: PhantomData,
             id: self.id,
-            distribution: Some(distribution),
             links: self.links,
+            distribution: Some(distribution.into()),
         }
     }
 }
 
-impl<D: Distribution<f64>> CreateBlockBuilder<WithDistribution, D> {
-    pub fn add_link(mut self, block_id: BlockId) -> Self {
-        self.links.push(block_id);
-        self
-    }
-
-    pub fn build(self) -> CreateBlock<D> {
+impl CreateBlockBuilder<true> {
+    pub fn build(self) -> CreateBlock {
         CreateBlock {
             id: self.id,
-            created_events: 0,
+            stats: CreateBlockStats::default(),
             links: self.links,
             distribution: self
                 .distribution
@@ -58,28 +37,46 @@ impl<D: Distribution<f64>> CreateBlockBuilder<WithDistribution, D> {
     }
 }
 
-impl<D: Distribution<f64>> CreateBlock<D> {
-    pub fn builder(id: BlockId) -> CreateBlockBuilder<WithoutDistribution, D> {
-        CreateBlockBuilder {
-            _p: PhantomData,
-            id,
-            distribution: None,
-            links: Vec::new(),
-        }
-    }
-
-    fn delay(&self) -> Duration {
-        Duration::from_secs_f64(self.distribution.sample(&mut rng()))
-    }
-}
-
-impl<D: Distribution<f64> + 'static> AsAny for CreateBlock<D> {
-    fn as_any(&self) -> &dyn Any {
+impl<const WITH_DISTRIBUTION: bool> CreateBlockBuilder<WITH_DISTRIBUTION> {
+    pub fn add_link(mut self, link: BlockId) -> Self {
+        self.links.push(link);
         self
     }
 }
 
-impl<D: Distribution<f64> + 'static> Block for CreateBlock<D> {
+#[derive(Default, Debug)]
+pub struct CreateBlockStats {
+    pub created_events: usize,
+}
+
+pub struct CreateBlock {
+    pub id: BlockId,
+    pub stats: CreateBlockStats,
+    pub links: Vec<BlockId>,
+    distribution: Distribution,
+}
+
+impl CreateBlock {
+    pub fn builder(id: BlockId) -> CreateBlockBuilder<false> {
+        CreateBlockBuilder {
+            id,
+            links: Vec::new(),
+            distribution: None,
+        }
+    }
+
+    fn delay(&self) -> Duration {
+        Duration::from_secs_f32(rng().sample(&self.distribution))
+    }
+}
+
+impl Stats<CreateBlockStats> for CreateBlock {
+    fn stats(&self) -> &CreateBlockStats {
+        &self.stats
+    }
+}
+
+impl BlockTrait for CreateBlock {
     fn id(&self) -> BlockId {
         self.id
     }
@@ -96,6 +93,6 @@ impl<D: Distribution<f64> + 'static> Block for CreateBlock<D> {
 
     fn process_out(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
         event_queue.push(Event(current_time + self.delay(), self.id, EventType::Out));
-        self.created_events += 1;
+        self.stats.created_events += 1;
     }
 }

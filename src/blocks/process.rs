@@ -1,14 +1,10 @@
 use crate::{
-    any::AsAny,
-    blocks::{Block, BlockId},
+    blocks::{BlockId, BlockTrait, Distribution, Stats},
     events::{Event, EventType},
 };
-use rand::rng;
-use rand_distr::Distribution;
+use rand::{rng, Rng};
 use std::{
-    any::Any,
     collections::BinaryHeap,
-    marker::PhantomData,
     time::{Duration, Instant},
 };
 
@@ -58,57 +54,54 @@ impl Queue {
     }
 }
 
-pub struct ProcessBlock<D: Distribution<f64>> {
-    pub id: BlockId,
-    pub queue: Queue,
+#[derive(Default, Debug)]
+pub struct ProcessBlockStats {
     pub rejections: usize,
     pub processed: usize,
-    links: Vec<BlockId>,
-    distribution: D,
 }
 
-pub struct ProcessBlockBuilder<State, D: Distribution<f64>> {
-    _p: PhantomData<State>,
+pub struct ProcessBlock {
+    pub id: BlockId,
+    pub queue: Queue,
+    pub stats: ProcessBlockStats,
+    links: Vec<BlockId>,
+    distribution: Distribution,
+}
+
+pub struct ProcessBlockBuilder<const WITH_DISTRIBUTION: bool> {
     id: BlockId,
     links: Vec<BlockId>,
-    distribution: Option<D>,
+    distribution: Option<Distribution>,
     max_queue_length: Option<usize>,
 }
 
-pub struct WithDistribution;
-pub struct WithoutDistribution;
-
-impl<D: Distribution<f64>> ProcessBlockBuilder<WithoutDistribution, D> {
-    pub fn distribution(self, distribution: D) -> ProcessBlockBuilder<WithDistribution, D> {
+impl ProcessBlockBuilder<false> {
+    pub fn distribution(self, distribution: impl Into<Distribution>) -> ProcessBlockBuilder<true> {
         ProcessBlockBuilder {
-            _p: PhantomData,
             id: self.id,
             links: self.links,
-            distribution: Some(distribution),
             max_queue_length: self.max_queue_length,
+            distribution: Some(distribution.into()),
         }
     }
 }
 
-impl<State, D: Distribution<f64>> ProcessBlockBuilder<State, D> {
+impl<const WITH_DISTRIBUTION: bool> ProcessBlockBuilder<WITH_DISTRIBUTION> {
     pub fn add_link(mut self, block_id: BlockId) -> Self {
         self.links.push(block_id);
         self
     }
 
-    pub fn max_queue_length(self, max_queue_length: usize) -> ProcessBlockBuilder<State, D> {
+    pub fn max_queue_length(self, max_queue_length: usize) -> Self {
         ProcessBlockBuilder {
-            _p: PhantomData,
-            id: self.id,
-            links: self.links,
-            distribution: self.distribution,
             max_queue_length: Some(max_queue_length),
+            ..self
         }
     }
 }
 
-impl<D: Distribution<f64>> ProcessBlockBuilder<WithDistribution, D> {
-    pub fn build(self) -> ProcessBlock<D> {
+impl ProcessBlockBuilder<true> {
+    pub fn build(self) -> ProcessBlock {
         ProcessBlock {
             id: self.id,
             queue: self
@@ -116,8 +109,7 @@ impl<D: Distribution<f64>> ProcessBlockBuilder<WithDistribution, D> {
                 .map(Queue::from_capacity)
                 .unwrap_or_default(),
             links: self.links,
-            rejections: 0,
-            processed: 0,
+            stats: ProcessBlockStats::default(),
             distribution: self
                 .distribution
                 .expect("distribution is Some because builder state is WithDistribution"),
@@ -125,10 +117,9 @@ impl<D: Distribution<f64>> ProcessBlockBuilder<WithDistribution, D> {
     }
 }
 
-impl<D: Distribution<f64>> ProcessBlock<D> {
-    pub fn builder(id: BlockId) -> ProcessBlockBuilder<WithoutDistribution, D> {
+impl ProcessBlock {
+    pub fn builder(id: BlockId) -> ProcessBlockBuilder<false> {
         ProcessBlockBuilder {
-            _p: PhantomData,
             id,
             links: Vec::new(),
             distribution: None,
@@ -137,17 +128,17 @@ impl<D: Distribution<f64>> ProcessBlock<D> {
     }
 
     fn delay(&self) -> Duration {
-        Duration::from_secs_f64(self.distribution.sample(&mut rng()))
+        Duration::from_secs_f32(rng().sample(&self.distribution))
     }
 }
 
-impl<D: Distribution<f64> + 'static> AsAny for ProcessBlock<D> {
-    fn as_any(&self) -> &dyn Any {
-        self
+impl Stats<ProcessBlockStats> for ProcessBlock {
+    fn stats(&self) -> &ProcessBlockStats {
+        &self.stats
     }
 }
 
-impl<D: Distribution<f64> + 'static> Block for ProcessBlock<D> {
+impl BlockTrait for ProcessBlock {
     fn id(&self) -> BlockId {
         self.id
     }
@@ -168,7 +159,7 @@ impl<D: Distribution<f64> + 'static> Block for ProcessBlock<D> {
                 self.queue.enqueue(current_time);
             }
             _ => {
-                self.rejections += 1;
+                self.stats.rejections += 1;
             }
         }
     }
@@ -178,11 +169,11 @@ impl<D: Distribution<f64> + 'static> Block for ProcessBlock<D> {
             0 => {}
             1 => {
                 self.queue.dequeue(current_time);
-                self.processed += 1;
+                self.stats.processed += 1;
             }
             _ => {
                 self.queue.dequeue(current_time);
-                self.processed += 1;
+                self.stats.processed += 1;
                 event_queue.push(Event(current_time + self.delay(), self.id, EventType::Out));
             }
         }

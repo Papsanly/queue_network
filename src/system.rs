@@ -1,5 +1,5 @@
 use crate::{
-    blocks::{Block, BlockId},
+    blocks::{Block, BlockId, BlockTrait},
     events::{Event, EventType},
 };
 use std::{
@@ -10,7 +10,7 @@ use std::{
 pub struct DiscreteEventSystem {
     event_queue: BinaryHeap<Event>,
     real_time: bool,
-    pub blocks: HashMap<BlockId, Box<dyn Block>>,
+    pub blocks: HashMap<BlockId, Block>,
 }
 
 impl DiscreteEventSystem {
@@ -28,15 +28,16 @@ impl DiscreteEventSystem {
         self
     }
 
-    pub fn add_block(mut self, block: impl Block + 'static) -> Self {
-        self.blocks.insert(block.id(), Box::new(block));
+    pub fn add_block(mut self, block: impl Into<Block>) -> Self {
+        let block = block.into();
+        self.blocks.insert(block.id(), block);
         self
     }
 
     pub fn simulate(
         &mut self,
         duration: Duration,
-        on_simulation_step: impl Fn(Instant, &dyn Block, EventType),
+        on_simulation_step: impl Fn(Instant, &Block, EventType),
     ) {
         let start = Instant::now();
         let end = start + duration;
@@ -68,7 +69,7 @@ impl DiscreteEventSystem {
                     }
                 }
             }
-            on_simulation_step(current_time, block.as_ref(), event_type);
+            on_simulation_step(current_time, block, event_type);
         }
     }
 }

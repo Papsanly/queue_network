@@ -1,31 +1,35 @@
 use crate::{
-    any::AsAny,
-    blocks::{Block, BlockId},
+    blocks::{BlockId, BlockTrait, Stats},
     events::Event,
 };
 use std::{collections::BinaryHeap, time::Instant};
 
+#[derive(Default, Debug)]
+pub struct DisposeBlockStats {
+    pub disposed_events: usize,
+}
+
 pub struct DisposeBlock {
     pub id: BlockId,
-    pub disposed_events: usize,
+    pub stats: DisposeBlockStats,
 }
 
 impl DisposeBlock {
     pub fn new(id: BlockId) -> Self {
         Self {
             id,
-            disposed_events: 0,
+            stats: DisposeBlockStats::default(),
         }
     }
 }
 
-impl AsAny for DisposeBlock {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
+impl Stats<DisposeBlockStats> for DisposeBlock {
+    fn stats(&self) -> &DisposeBlockStats {
+        &self.stats
     }
 }
 
-impl Block for DisposeBlock {
+impl BlockTrait for DisposeBlock {
     fn id(&self) -> BlockId {
         self.id
     }
@@ -37,7 +41,7 @@ impl Block for DisposeBlock {
     fn init(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {}
 
     fn process_in(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {
-        self.disposed_events += 1;
+        self.stats.disposed_events += 1;
     }
 
     fn process_out(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {}
