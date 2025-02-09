@@ -7,17 +7,19 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub struct QueueNetwork {
+pub struct QueueNetwork<F: Fn(Duration, &BlockType, EventType)> {
     event_queue: BinaryHeap<Event>,
     real_time: bool,
+    on_simulation_step: Option<F>,
     pub blocks: HashMap<BlockId, BlockType>,
 }
 
-impl QueueNetwork {
+impl<F: Fn(Duration, &BlockType, EventType)> QueueNetwork<F> {
     pub fn new() -> Self {
         Self {
             event_queue: BinaryHeap::new(),
             real_time: false,
+            on_simulation_step: None,
             blocks: HashMap::new(),
         }
     }
@@ -34,11 +36,12 @@ impl QueueNetwork {
         self
     }
 
-    pub fn simulate(
-        &mut self,
-        duration: Duration,
-        on_simulation_step: impl Fn(Instant, &BlockType, EventType),
-    ) {
+    pub fn on_simulation_step(mut self, on_simulation_step: F) -> Self {
+        self.on_simulation_step = Some(on_simulation_step);
+        self
+    }
+
+    pub fn simulate(&mut self, duration: Duration) {
         let start = Instant::now();
         let end = start + duration;
         let mut current_time = start;
@@ -69,7 +72,9 @@ impl QueueNetwork {
                     }
                 }
             }
-            on_simulation_step(current_time, block, event_type);
+            if let Some(ref f) = self.on_simulation_step {
+                f(current_time - start, block, event_type)
+            }
         }
     }
 }

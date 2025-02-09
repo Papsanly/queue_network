@@ -7,7 +7,7 @@ use crate::{
     system::QueueNetwork,
 };
 use rand_distr::Exp;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 fn main() {
     let mut network = QueueNetwork::new()
@@ -38,18 +38,18 @@ fn main() {
                 .add_link("dispose")
                 .build(),
         )
-        .add_block(DisposeBlock::new("dispose"));
+        .add_block(DisposeBlock::new("dispose"))
+        .on_simulation_step(|elapsed_time, block, event_type| {
+            println!(
+                "Elapsed Time: {:.3} | Event: {:?} | Block: {} | {:?}",
+                elapsed_time.as_secs_f32(),
+                event_type,
+                block.id(),
+                block.stats()
+            );
+        });
 
-    let start_time = Instant::now();
-    network.simulate(Duration::from_secs(1000), |instant, block, event_type| {
-        println!(
-            "Elapsed Time: {:.3} | Event: {:?} | Block: {} | {:?}",
-            (instant - start_time).as_secs_f32(),
-            event_type,
-            block.id(),
-            block.stats()
-        );
-    });
+    network.simulate(Duration::from_secs(1000));
 
     println!("Final Simulation State:");
     let mut blocks = network.blocks.values().collect::<Vec<_>>();
