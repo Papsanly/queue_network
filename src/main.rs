@@ -41,7 +41,7 @@ fn main() {
         .add_block(DisposeBlock::new("dispose"))
         .on_simulation_step(|elapsed_time, block, event_type| {
             println!(
-                "Elapsed Time: {:.3} | Event: {:?} | Block: {} | {:?}",
+                "Elapsed Time: {:.3} | Event: {:?} {}: {:#?}",
                 elapsed_time.as_secs_f32(),
                 event_type,
                 block.id(),
