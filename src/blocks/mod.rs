@@ -14,6 +14,7 @@ use std::{collections::BinaryHeap, fmt::Debug, time::Instant};
 mod create;
 mod dispose;
 mod process;
+mod queue;
 
 pub type BlockId = &'static str;
 
