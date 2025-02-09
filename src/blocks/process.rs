@@ -13,6 +13,7 @@ pub struct Queue {
     pub length: usize,
     pub capacity: Option<usize>,
     pub processed: usize,
+    pub rejections: usize,
     lengths: Vec<(Instant, usize)>,
 }
 
@@ -22,6 +23,7 @@ impl Queue {
             length: 0,
             capacity: Some(capacity),
             processed: 0,
+            rejections: 0,
             lengths: Vec::new(),
         }
     }
@@ -76,7 +78,6 @@ pub struct ProcessBlockStats {
 pub struct ProcessBlock {
     pub id: BlockId,
     pub queue: Queue,
-    pub rejections: usize,
     links: Vec<BlockId>,
     distribution: Distribution,
 }
@@ -120,7 +121,6 @@ impl ProcessBlockBuilder<true> {
                 .map(Queue::from_capacity)
                 .unwrap_or_default(),
             links: self.links,
-            rejections: 0,
             distribution: self
                 .distribution
                 .expect("distribution is Some because builder state is WithDistribution"),
@@ -147,9 +147,9 @@ impl Stats<ProcessBlockStats> for ProcessBlock {
     fn stats(&self) -> ProcessBlockStats {
         ProcessBlockStats {
             processed: self.queue.processed,
-            rejections: self.rejections,
-            rejection_probability: self.rejections as f32
-                / (self.rejections + self.queue.processed) as f32,
+            rejections: self.queue.rejections,
+            rejection_probability: self.queue.rejections as f32
+                / (self.queue.rejections + self.queue.processed) as f32,
             average_queue_length: self.queue.average_length(),
             average_waited_time: self.queue.average_waited_time(),
         }
@@ -177,7 +177,7 @@ impl BlockTrait for ProcessBlock {
                 self.queue.enqueue(current_time);
             }
             _ => {
-                self.rejections += 1;
+                self.queue.rejections += 1;
             }
         }
     }
