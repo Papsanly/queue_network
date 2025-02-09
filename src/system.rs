@@ -1,5 +1,5 @@
 use crate::{
-    blocks::{Block, BlockId, BlockTrait},
+    blocks::{Block, BlockId, BlockType},
     events::{Event, EventType},
 };
 use std::{
@@ -10,7 +10,7 @@ use std::{
 pub struct QueueNetwork {
     event_queue: BinaryHeap<Event>,
     real_time: bool,
-    pub blocks: HashMap<BlockId, Block>,
+    pub blocks: HashMap<BlockId, BlockType>,
 }
 
 impl QueueNetwork {
@@ -28,7 +28,7 @@ impl QueueNetwork {
         self
     }
 
-    pub fn add_block(mut self, block: impl Into<Block>) -> Self {
+    pub fn add_block(mut self, block: impl Into<BlockType>) -> Self {
         let block = block.into();
         self.blocks.insert(block.id(), block);
         self
@@ -37,7 +37,7 @@ impl QueueNetwork {
     pub fn simulate(
         &mut self,
         duration: Duration,
-        on_simulation_step: impl Fn(Instant, &Block, EventType),
+        on_simulation_step: impl Fn(Instant, &BlockType, EventType),
     ) {
         let start = Instant::now();
         let end = start + duration;

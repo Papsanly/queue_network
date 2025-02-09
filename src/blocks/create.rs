@@ -1,5 +1,5 @@
 use crate::{
-    blocks::{BlockId, BlockTrait, Distribution},
+    blocks::{Block, BlockId, Distribution},
     events::{Event, EventType},
 };
 use rand::{rng, Rng};
@@ -71,7 +71,7 @@ impl CreateBlock {
     }
 }
 
-impl BlockTrait for CreateBlock {
+impl Block for CreateBlock {
     type Stats = CreateBlockStats;
 
     fn id(&self) -> BlockId {

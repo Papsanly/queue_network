@@ -17,7 +17,7 @@ mod process;
 
 pub type BlockId = &'static str;
 
-pub trait BlockTrait {
+pub trait Block {
     type Stats;
     fn id(&self) -> BlockId;
     fn links(&self) -> &[BlockId];
@@ -59,54 +59,54 @@ impl_distribution!(Exp, Normal, Uniform);
 
 macro_rules! impl_block {
     ($($name:ident),*) => {
-        pub enum Block {
+        pub enum BlockType {
             $($name($name),)*
         }
 
         $(
-            impl From<$name> for Block {
+            impl From<$name> for BlockType {
                 fn from(block: $name) -> Self {
-                    Block::$name(block)
+                    BlockType::$name(block)
                 }
             }
         )*
 
-        impl BlockTrait for Block {
+        impl Block for BlockType {
             type Stats = Box<dyn Debug>;
 
             fn id(&self) -> BlockId {
                 match self {
-                    $(Block::$name(block) => block.id(),)*
+                    $(BlockType::$name(block) => block.id(),)*
                 }
             }
 
             fn links(&self) -> &[BlockId] {
                 match self {
-                    $(Block::$name(block) => block.links(),)*
+                    $(BlockType::$name(block) => block.links(),)*
                 }
             }
 
             fn stats(&self) -> Box<dyn Debug> {
                 match self {
-                    $(Block::$name(block) => Box::new(block.stats()),)*
+                    $(BlockType::$name(block) => Box::new(block.stats()),)*
                 }
             }
 
             fn init(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
                 match self {
-                    $(Block::$name(block) => block.init(event_queue, current_time),)*
+                    $(BlockType::$name(block) => block.init(event_queue, current_time),)*
                 }
             }
 
             fn process_in(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
                 match self {
-                    $(Block::$name(block) => block.process_in(event_queue, current_time),)*
+                    $(BlockType::$name(block) => block.process_in(event_queue, current_time),)*
                 }
             }
 
             fn process_out(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
                 match self {
-                    $(Block::$name(block) => block.process_out(event_queue, current_time),)*
+                    $(BlockType::$name(block) => block.process_out(event_queue, current_time),)*
                 }
             }
         }
