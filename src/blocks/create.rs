@@ -8,36 +8,37 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub struct CreateBlockBuilder<const WITH_DISTRIBUTION: bool> {
+pub struct CreateBlockBuilder<Distribution> {
     id: BlockId,
     links: Vec<BlockId>,
-    distribution: Option<Distribution>,
+    distribution: Distribution,
 }
 
-impl CreateBlockBuilder<false> {
-    pub fn distribution(self, distribution: impl Into<Distribution>) -> CreateBlockBuilder<true> {
+impl CreateBlockBuilder<()> {
+    pub fn distribution(
+        self,
+        distribution: impl Into<Distribution>,
+    ) -> CreateBlockBuilder<Distribution> {
         CreateBlockBuilder {
             id: self.id,
             links: self.links,
-            distribution: Some(distribution.into()),
+            distribution: distribution.into(),
         }
     }
 }
 
-impl CreateBlockBuilder<true> {
+impl CreateBlockBuilder<Distribution> {
     pub fn build(self) -> CreateBlock {
         CreateBlock {
             id: self.id,
             created_events: 0,
             links: self.links,
-            distribution: self
-                .distribution
-                .expect("distribution is Some because builder state is WithDistribution"),
+            distribution: self.distribution,
         }
     }
 }
 
-impl<const WITH_DISTRIBUTION: bool> CreateBlockBuilder<WITH_DISTRIBUTION> {
+impl<Distribution> CreateBlockBuilder<Distribution> {
     pub fn add_link(mut self, link: BlockId) -> Self {
         self.links.push(link);
         self
@@ -58,11 +59,11 @@ pub struct CreateBlock {
 }
 
 impl CreateBlock {
-    pub fn builder(id: BlockId) -> CreateBlockBuilder<false> {
+    pub fn builder(id: BlockId) -> CreateBlockBuilder<()> {
         CreateBlockBuilder {
             id,
             links: Vec::new(),
-            distribution: None,
+            distribution: (),
         }
     }
 

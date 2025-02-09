@@ -25,25 +25,28 @@ pub struct ProcessBlock {
     distribution: Distribution,
 }
 
-pub struct ProcessBlockBuilder<const WITH_DISTRIBUTION: bool> {
+pub struct ProcessBlockBuilder<Distribution> {
     id: BlockId,
     links: Vec<BlockId>,
-    distribution: Option<Distribution>,
+    distribution: Distribution,
     max_queue_length: Option<usize>,
 }
 
-impl ProcessBlockBuilder<false> {
-    pub fn distribution(self, distribution: impl Into<Distribution>) -> ProcessBlockBuilder<true> {
+impl ProcessBlockBuilder<()> {
+    pub fn distribution(
+        self,
+        distribution: impl Into<Distribution>,
+    ) -> ProcessBlockBuilder<Distribution> {
         ProcessBlockBuilder {
             id: self.id,
             links: self.links,
             max_queue_length: self.max_queue_length,
-            distribution: Some(distribution.into()),
+            distribution: distribution.into(),
         }
     }
 }
 
-impl<const WITH_DISTRIBUTION: bool> ProcessBlockBuilder<WITH_DISTRIBUTION> {
+impl<Distribution> ProcessBlockBuilder<Distribution> {
     pub fn add_link(mut self, block_id: BlockId) -> Self {
         self.links.push(block_id);
         self
@@ -55,7 +58,7 @@ impl<const WITH_DISTRIBUTION: bool> ProcessBlockBuilder<WITH_DISTRIBUTION> {
     }
 }
 
-impl ProcessBlockBuilder<true> {
+impl ProcessBlockBuilder<Distribution> {
     pub fn build(self) -> ProcessBlock {
         ProcessBlock {
             id: self.id,
@@ -64,19 +67,17 @@ impl ProcessBlockBuilder<true> {
                 .map(Queue::from_capacity)
                 .unwrap_or_default(),
             links: self.links,
-            distribution: self
-                .distribution
-                .expect("distribution is Some because builder state is WithDistribution"),
+            distribution: self.distribution,
         }
     }
 }
 
 impl ProcessBlock {
-    pub fn builder(id: BlockId) -> ProcessBlockBuilder<false> {
+    pub fn builder(id: BlockId) -> ProcessBlockBuilder<()> {
         ProcessBlockBuilder {
             id,
             links: Vec::new(),
-            distribution: None,
+            distribution: (),
             max_queue_length: None,
         }
     }
