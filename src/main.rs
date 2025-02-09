@@ -59,6 +59,6 @@ fn main() {
         _ => "1".to_string() + block.id(),
     });
     for block in blocks {
-        println!("Block: {} | {:?}", block.id(), block.stats());
+        println!("{}: {:#?}", block.id(), block.stats());
     }
 }
