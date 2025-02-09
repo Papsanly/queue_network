@@ -3,7 +3,7 @@ mod events;
 mod system;
 
 use crate::{
-    blocks::{BlockTrait, CreateBlock, DisposeBlock, ProcessBlock, Stats},
+    blocks::{BlockTrait, CreateBlock, DisposeBlock, ProcessBlock},
     system::QueueNetwork,
 };
 use rand_distr::Exp;

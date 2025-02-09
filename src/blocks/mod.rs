@@ -17,13 +17,11 @@ mod process;
 
 pub type BlockId = &'static str;
 
-pub trait Stats<T> {
-    fn stats(&self) -> T;
-}
-
 pub trait BlockTrait {
+    type Stats;
     fn id(&self) -> BlockId;
     fn links(&self) -> &[BlockId];
+    fn stats(&self) -> Self::Stats;
     fn init(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant);
     fn process_in(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant);
     fn process_out(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant);
@@ -73,15 +71,9 @@ macro_rules! impl_block {
             }
         )*
 
-        impl Stats<Box<dyn Debug>> for Block {
-            fn stats(&self) -> Box<dyn Debug> {
-                match self {
-                    $(Block::$name(block) => Box::new(block.stats()),)*
-                }
-            }
-        }
-
         impl BlockTrait for Block {
+            type Stats = Box<dyn Debug>;
+
             fn id(&self) -> BlockId {
                 match self {
                     $(Block::$name(block) => block.id(),)*
@@ -91,6 +83,12 @@ macro_rules! impl_block {
             fn links(&self) -> &[BlockId] {
                 match self {
                     $(Block::$name(block) => block.links(),)*
+                }
+            }
+
+            fn stats(&self) -> Box<dyn Debug> {
+                match self {
+                    $(Block::$name(block) => Box::new(block.stats()),)*
                 }
             }
 

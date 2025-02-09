@@ -1,5 +1,5 @@
 use crate::{
-    blocks::{BlockId, BlockTrait, Distribution, Stats},
+    blocks::{BlockId, BlockTrait, Distribution},
     events::{Event, EventType},
 };
 use rand::{rng, Rng};
@@ -143,7 +143,17 @@ impl ProcessBlock {
     }
 }
 
-impl Stats<ProcessBlockStats> for ProcessBlock {
+impl BlockTrait for ProcessBlock {
+    type Stats = ProcessBlockStats;
+
+    fn id(&self) -> BlockId {
+        self.id
+    }
+
+    fn links(&self) -> &[BlockId] {
+        &self.links
+    }
+
     fn stats(&self) -> ProcessBlockStats {
         ProcessBlockStats {
             processed: self.queue.processed,
@@ -153,16 +163,6 @@ impl Stats<ProcessBlockStats> for ProcessBlock {
             average_queue_length: self.queue.average_length(),
             average_waited_time: self.queue.average_waited_time(),
         }
-    }
-}
-
-impl BlockTrait for ProcessBlock {
-    fn id(&self) -> BlockId {
-        self.id
-    }
-
-    fn links(&self) -> &[BlockId] {
-        &self.links
     }
 
     fn init(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {}

@@ -1,5 +1,5 @@
 use crate::{
-    blocks::{BlockId, BlockTrait, Distribution, Stats},
+    blocks::{BlockId, BlockTrait, Distribution},
     events::{Event, EventType},
 };
 use rand::{rng, Rng};
@@ -71,21 +71,21 @@ impl CreateBlock {
     }
 }
 
-impl Stats<CreateBlockStats> for CreateBlock {
-    fn stats(&self) -> CreateBlockStats {
-        CreateBlockStats {
-            created_events: self.created_events,
-        }
-    }
-}
-
 impl BlockTrait for CreateBlock {
+    type Stats = CreateBlockStats;
+
     fn id(&self) -> BlockId {
         self.id
     }
 
     fn links(&self) -> &[BlockId] {
         &self.links
+    }
+
+    fn stats(&self) -> CreateBlockStats {
+        CreateBlockStats {
+            created_events: self.created_events,
+        }
     }
 
     fn init(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {

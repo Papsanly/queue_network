@@ -1,5 +1,5 @@
 use crate::{
-    blocks::{BlockId, BlockTrait, Stats},
+    blocks::{BlockId, BlockTrait},
     events::Event,
 };
 use std::{collections::BinaryHeap, time::Instant};
@@ -24,21 +24,21 @@ impl DisposeBlock {
     }
 }
 
-impl Stats<DisposeBlockStats> for DisposeBlock {
-    fn stats(&self) -> DisposeBlockStats {
-        DisposeBlockStats {
-            disposed_events: self.disposed_events,
-        }
-    }
-}
-
 impl BlockTrait for DisposeBlock {
+    type Stats = DisposeBlockStats;
+
     fn id(&self) -> BlockId {
         self.id
     }
 
     fn links(&self) -> &[BlockId] {
         &[]
+    }
+
+    fn stats(&self) -> DisposeBlockStats {
+        DisposeBlockStats {
+            disposed_events: self.disposed_events,
+        }
     }
 
     fn init(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {}
