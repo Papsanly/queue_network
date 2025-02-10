@@ -66,9 +66,9 @@ impl<F: Fn(Duration, &BlockType, EventType)> QueueNetwork<F> {
                 EventType::In => block.process_in(&mut self.event_queue, current_time),
                 EventType::Out => {
                     block.process_out(&mut self.event_queue, current_time);
-                    for link in block.links() {
+                    if let Some(next) = block.next() {
                         self.event_queue
-                            .push(Event(current_time, link, EventType::In));
+                            .push(Event(current_time, next, EventType::In));
                     }
                 }
             }

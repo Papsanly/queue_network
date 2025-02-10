@@ -1,6 +1,7 @@
 use crate::{
-    blocks::{Block, BlockId, Distribution},
+    blocks::{Block, BlockId, DistributionType},
     events::{Event, EventType},
+    routers::{Router, RouterType},
 };
 use rand::{rng, Rng};
 use std::{
@@ -8,40 +9,46 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub struct CreateBlockBuilder<Distribution> {
+pub struct CreateBlockBuilder<Distribution, Router> {
     id: BlockId,
-    links: Vec<BlockId>,
+    router: Router,
     distribution: Distribution,
 }
 
-impl CreateBlockBuilder<()> {
+impl<Router> CreateBlockBuilder<(), Router> {
     pub fn distribution(
         self,
-        distribution: impl Into<Distribution>,
-    ) -> CreateBlockBuilder<Distribution> {
+        distribution: impl Into<DistributionType>,
+    ) -> CreateBlockBuilder<DistributionType, Router> {
         CreateBlockBuilder {
             id: self.id,
-            links: self.links,
+            router: self.router,
             distribution: distribution.into(),
         }
     }
 }
 
-impl CreateBlockBuilder<Distribution> {
-    pub fn build(self) -> CreateBlock {
-        CreateBlock {
+impl<Distribution> CreateBlockBuilder<Distribution, ()> {
+    pub fn router(
+        self,
+        router: impl Into<RouterType>,
+    ) -> CreateBlockBuilder<Distribution, RouterType> {
+        CreateBlockBuilder {
             id: self.id,
-            created_events: 0,
-            links: self.links,
             distribution: self.distribution,
+            router: router.into(),
         }
     }
 }
 
-impl<Distribution> CreateBlockBuilder<Distribution> {
-    pub fn add_link(mut self, link: BlockId) -> Self {
-        self.links.push(link);
-        self
+impl CreateBlockBuilder<DistributionType, RouterType> {
+    pub fn build(self) -> CreateBlock {
+        CreateBlock {
+            id: self.id,
+            created_events: 0,
+            router: self.router,
+            distribution: self.distribution,
+        }
     }
 }
 
@@ -54,15 +61,15 @@ pub struct CreateBlockStats {
 pub struct CreateBlock {
     pub id: BlockId,
     pub created_events: usize,
-    pub links: Vec<BlockId>,
-    distribution: Distribution,
+    router: RouterType,
+    distribution: DistributionType,
 }
 
 impl CreateBlock {
-    pub fn builder(id: BlockId) -> CreateBlockBuilder<()> {
+    pub fn builder(id: BlockId) -> CreateBlockBuilder<(), ()> {
         CreateBlockBuilder {
             id,
-            links: Vec::new(),
+            router: (),
             distribution: (),
         }
     }
@@ -79,8 +86,8 @@ impl Block for CreateBlock {
         self.id
     }
 
-    fn links(&self) -> &[BlockId] {
-        &self.links
+    fn next(&self) -> Option<BlockId> {
+        self.router.next()
     }
 
     fn stats(&self) -> CreateBlockStats {

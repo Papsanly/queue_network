@@ -1,6 +1,7 @@
 use crate::{
-    blocks::{queue::Queue, Block, BlockId, Distribution},
+    blocks::{queue::Queue, Block, BlockId, DistributionType},
     events::{Event, EventType},
+    routers::{Router, RouterType},
 };
 use rand::{rng, Rng};
 use std::{
@@ -21,44 +22,53 @@ pub struct ProcessBlockStats {
 pub struct ProcessBlock {
     pub id: BlockId,
     pub queue: Queue,
-    links: Vec<BlockId>,
-    distribution: Distribution,
+    router: RouterType,
+    distribution: DistributionType,
 }
 
-pub struct ProcessBlockBuilder<Distribution> {
+pub struct ProcessBlockBuilder<Distribution, Router> {
     id: BlockId,
-    links: Vec<BlockId>,
+    router: Router,
     distribution: Distribution,
     max_queue_length: Option<usize>,
 }
 
-impl ProcessBlockBuilder<()> {
-    pub fn distribution(
+impl<Distribution> ProcessBlockBuilder<Distribution, ()> {
+    pub fn router(
         self,
-        distribution: impl Into<Distribution>,
-    ) -> ProcessBlockBuilder<Distribution> {
+        router: impl Into<RouterType>,
+    ) -> ProcessBlockBuilder<Distribution, RouterType> {
         ProcessBlockBuilder {
             id: self.id,
-            links: self.links,
+            max_queue_length: self.max_queue_length,
+            distribution: self.distribution,
+            router: router.into(),
+        }
+    }
+}
+
+impl<Router> ProcessBlockBuilder<(), Router> {
+    pub fn distribution(
+        self,
+        distribution: impl Into<DistributionType>,
+    ) -> ProcessBlockBuilder<DistributionType, Router> {
+        ProcessBlockBuilder {
+            id: self.id,
+            router: self.router,
             max_queue_length: self.max_queue_length,
             distribution: distribution.into(),
         }
     }
 }
 
-impl<Distribution> ProcessBlockBuilder<Distribution> {
-    pub fn add_link(mut self, block_id: BlockId) -> Self {
-        self.links.push(block_id);
-        self
-    }
-
+impl<Distribution, Router> ProcessBlockBuilder<Distribution, Router> {
     pub fn max_queue_length(mut self, max_queue_length: usize) -> Self {
         self.max_queue_length = Some(max_queue_length);
         self
     }
 }
 
-impl ProcessBlockBuilder<Distribution> {
+impl ProcessBlockBuilder<DistributionType, RouterType> {
     pub fn build(self) -> ProcessBlock {
         ProcessBlock {
             id: self.id,
@@ -66,17 +76,17 @@ impl ProcessBlockBuilder<Distribution> {
                 .max_queue_length
                 .map(Queue::from_capacity)
                 .unwrap_or_default(),
-            links: self.links,
+            router: self.router,
             distribution: self.distribution,
         }
     }
 }
 
 impl ProcessBlock {
-    pub fn builder(id: BlockId) -> ProcessBlockBuilder<()> {
+    pub fn builder(id: BlockId) -> ProcessBlockBuilder<(), ()> {
         ProcessBlockBuilder {
             id,
-            links: Vec::new(),
+            router: (),
             distribution: (),
             max_queue_length: None,
         }
@@ -94,8 +104,8 @@ impl Block for ProcessBlock {
         self.id
     }
 
-    fn links(&self) -> &[BlockId] {
-        &self.links
+    fn next(&self) -> Option<BlockId> {
+        self.router.next()
     }
 
     fn stats(&self) -> ProcessBlockStats {

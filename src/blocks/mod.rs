@@ -7,8 +7,8 @@ pub use dispose::DisposeBlock;
 pub use process::ProcessBlock;
 
 use crate::events::Event;
-use rand::{distr::Uniform, Rng};
-use rand_distr::{Exp, Normal};
+use rand::Rng;
+use rand_distr::{Exp, Normal, Uniform};
 use std::{collections::BinaryHeap, fmt::Debug, time::Instant};
 
 mod create;
@@ -21,7 +21,7 @@ pub type BlockId = &'static str;
 pub trait Block {
     type Stats;
     fn id(&self) -> BlockId;
-    fn links(&self) -> &[BlockId];
+    fn next(&self) -> Option<BlockId>;
     fn stats(&self) -> Self::Stats;
     fn init(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant);
     fn process_in(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant);
@@ -29,89 +29,93 @@ pub trait Block {
 }
 
 macro_rules! impl_distribution {
-    ($($name:ident),*) => {
-        pub enum Distribution {
-            $(
-                $name($name<f32>),
-            )*
+    ($enum_name:ident {$($name:ident),*}) => {
+        pub enum $enum_name {
+            $($name($name<f32>),)*
         }
 
         $(
-            impl From<$name<f32>> for Distribution {
+            impl From<$name<f32>> for $enum_name {
                 fn from(distribution: $name<f32>) -> Self {
-                    Distribution::$name(distribution)
+                    DistributionType::$name(distribution)
                 }
             }
         )*
 
-        impl rand_distr::Distribution<f32> for Distribution {
+        impl rand_distr::Distribution<f32> for $enum_name {
             fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> f32 {
                 match self {
-                    $(
-                        Distribution::$name(distribution) => distribution.sample(rng),
-                    )*
+                    $($enum_name::$name(distribution) => distribution.sample(rng),)*
                 }
             }
         }
     };
 }
 
-impl_distribution!(Exp, Normal, Uniform);
+impl_distribution!(DistributionType {
+    Exp,
+    Normal,
+    Uniform
+});
 
 macro_rules! impl_block {
-    ($($name:ident),*) => {
-        pub enum BlockType {
+    ($enum_name:ident {$($name:ident),*}) => {
+        pub enum $enum_name {
             $($name($name),)*
         }
 
         $(
-            impl From<$name> for BlockType {
+            impl From<$name> for $enum_name {
                 fn from(block: $name) -> Self {
-                    BlockType::$name(block)
+                    $enum_name::$name(block)
                 }
             }
         )*
 
-        impl Block for BlockType {
+        impl Block for $enum_name {
             type Stats = Box<dyn Debug>;
 
             fn id(&self) -> BlockId {
                 match self {
-                    $(BlockType::$name(block) => block.id(),)*
+                    $($enum_name::$name(block) => block.id(),)*
                 }
             }
 
-            fn links(&self) -> &[BlockId] {
+            fn next(&self) -> Option<BlockId> {
                 match self {
-                    $(BlockType::$name(block) => block.links(),)*
+                    $($enum_name::$name(block) => block.next(),)*
                 }
             }
 
             fn stats(&self) -> Box<dyn Debug> {
                 match self {
-                    $(BlockType::$name(block) => Box::new(block.stats()),)*
+                    $($enum_name::$name(block) => Box::new(block.stats()),)*
                 }
             }
 
             fn init(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
                 match self {
-                    $(BlockType::$name(block) => block.init(event_queue, current_time),)*
+                    $($enum_name::$name(block) => block.init(event_queue, current_time),)*
                 }
             }
 
             fn process_in(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
                 match self {
-                    $(BlockType::$name(block) => block.process_in(event_queue, current_time),)*
+                    $($enum_name::$name(block) => block.process_in(event_queue, current_time),)*
                 }
             }
 
             fn process_out(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
                 match self {
-                    $(BlockType::$name(block) => block.process_out(event_queue, current_time),)*
+                    $($enum_name::$name(block) => block.process_out(event_queue, current_time),)*
                 }
             }
         }
     };
 }
 
-impl_block!(Create, Dispose, Process);
+impl_block!(BlockType {
+    Create,
+    Dispose,
+    Process
+});

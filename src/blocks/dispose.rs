@@ -31,8 +31,8 @@ impl Block for DisposeBlock {
         self.id
     }
 
-    fn links(&self) -> &[BlockId] {
-        &[]
+    fn next(&self) -> Option<BlockId> {
+        None
     }
 
     fn stats(&self) -> DisposeBlockStats {

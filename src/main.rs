@@ -1,10 +1,12 @@
 mod blocks;
 mod events;
-mod system;
+mod network;
+mod routers;
 
 use crate::{
     blocks::{Block, CreateBlock, DisposeBlock, ProcessBlock},
-    system::QueueNetwork,
+    network::QueueNetwork,
+    routers::{DirectRouter, ProbabilityRouter},
 };
 use rand_distr::Exp;
 use std::time::Duration;
@@ -14,28 +16,31 @@ fn main() {
         .add_block(
             CreateBlock::builder("create")
                 .distribution(Exp::new(0.5).unwrap())
-                .add_link("process1")
+                .router(DirectRouter::new("process1"))
                 .build(),
         )
         .add_block(
             ProcessBlock::builder("process1")
                 .distribution(Exp::new(1.0).unwrap())
                 .max_queue_length(5)
-                .add_link("process2")
+                .router(DirectRouter::new("process2"))
                 .build(),
         )
         .add_block(
             ProcessBlock::builder("process2")
                 .distribution(Exp::new(1.0).unwrap())
                 .max_queue_length(5)
-                .add_link("process3")
+                .router(DirectRouter::new("process3"))
                 .build(),
         )
         .add_block(
             ProcessBlock::builder("process3")
                 .distribution(Exp::new(1.0).unwrap())
                 .max_queue_length(5)
-                .add_link("dispose")
+                .router(ProbabilityRouter::new(&[
+                    (0.5, "dispose"),
+                    (0.5, "process1"),
+                ]))
                 .build(),
         )
         .add_block(DisposeBlock::new("dispose"))
