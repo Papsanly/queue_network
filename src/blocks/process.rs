@@ -9,19 +9,29 @@ use std::{
     time::{Duration, Instant},
 };
 
+#[derive(Debug, Copy, Clone)]
+pub enum ProcessBlockState {
+    Idle,
+    Busy,
+}
+
 #[allow(unused)]
 #[derive(Debug)]
 pub struct ProcessBlockStats {
     pub processed: usize,
     pub rejections: usize,
+    pub state: ProcessBlockState,
     pub rejection_probability: f32,
-    pub average_queue_length: f32,
-    pub average_waited_time: f32,
+    pub average_queue_length: Option<f32>,
+    pub average_waited_time: Option<f32>,
 }
 
 pub struct ProcessBlock {
     pub id: BlockId,
-    pub queue: Queue,
+    pub queue: Option<Queue>,
+    pub state: ProcessBlockState,
+    pub processed: usize,
+    pub rejections: usize,
     router: RouterType,
     distribution: DistributionType,
 }
@@ -30,7 +40,7 @@ pub struct ProcessBlockBuilder<Distribution, Router> {
     id: BlockId,
     router: Router,
     distribution: Distribution,
-    max_queue_length: Option<usize>,
+    queue: Option<Queue>,
 }
 
 impl<Distribution> ProcessBlockBuilder<Distribution, ()> {
@@ -40,7 +50,7 @@ impl<Distribution> ProcessBlockBuilder<Distribution, ()> {
     ) -> ProcessBlockBuilder<Distribution, RouterType> {
         ProcessBlockBuilder {
             id: self.id,
-            max_queue_length: self.max_queue_length,
+            queue: self.queue,
             distribution: self.distribution,
             router: router.into(),
         }
@@ -55,15 +65,15 @@ impl<Router> ProcessBlockBuilder<(), Router> {
         ProcessBlockBuilder {
             id: self.id,
             router: self.router,
-            max_queue_length: self.max_queue_length,
+            queue: self.queue,
             distribution: distribution.into(),
         }
     }
 }
 
 impl<Distribution, Router> ProcessBlockBuilder<Distribution, Router> {
-    pub fn max_queue_length(mut self, max_queue_length: usize) -> Self {
-        self.max_queue_length = Some(max_queue_length);
+    pub fn queue(mut self, queue: Queue) -> Self {
+        self.queue = Some(queue);
         self
     }
 }
@@ -72,10 +82,10 @@ impl ProcessBlockBuilder<DistributionType, RouterType> {
     pub fn build(self) -> ProcessBlock {
         ProcessBlock {
             id: self.id,
-            queue: self
-                .max_queue_length
-                .map(Queue::from_capacity)
-                .unwrap_or_default(),
+            queue: self.queue,
+            processed: 0,
+            rejections: 0,
+            state: ProcessBlockState::Idle,
             router: self.router,
             distribution: self.distribution,
         }
@@ -88,7 +98,7 @@ impl ProcessBlock {
             id,
             router: (),
             distribution: (),
-            max_queue_length: None,
+            queue: None,
         }
     }
 
@@ -110,41 +120,52 @@ impl Block for ProcessBlock {
 
     fn stats(&self) -> ProcessBlockStats {
         ProcessBlockStats {
-            processed: self.queue.processed,
-            rejections: self.queue.rejections,
-            rejection_probability: self.queue.rejections as f32
-                / (self.queue.rejections + self.queue.processed) as f32,
-            average_queue_length: self.queue.average_length(),
-            average_waited_time: self.queue.average_waited_time(),
+            processed: self.processed,
+            rejections: self.rejections,
+            rejection_probability: self.rejections as f32
+                / (self.rejections + self.processed) as f32,
+            state: self.state,
+            average_queue_length: self.queue.as_ref().map(|q| q.average_length()),
+            average_waited_time: self
+                .queue
+                .as_ref()
+                .map(|q| q.total_waited_time() / self.processed as f32),
         }
     }
 
-    fn init(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {}
-
     fn process_in(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
-        match self.queue.length {
-            0 => {
+        match self.state {
+            ProcessBlockState::Idle => {
                 event_queue.push(Event(current_time + self.delay(), self.id, EventType::Out));
-                self.queue.enqueue(current_time);
+                self.state = ProcessBlockState::Busy;
             }
-            x if x < self.queue.capacity.unwrap_or(usize::MAX) => {
-                self.queue.enqueue(current_time);
-            }
-            _ => {
-                self.queue.rejections += 1;
+            ProcessBlockState::Busy => {
+                let Some(queue) = &mut self.queue else {
+                    self.rejections += 1;
+                    return;
+                };
+                if queue.length < queue.capacity.unwrap_or(usize::MAX) {
+                    queue.enqueue(current_time);
+                } else {
+                    self.rejections += 1;
+                }
             }
         }
     }
 
     fn process_out(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
-        match self.queue.length {
-            0 => {}
-            1 => {
-                self.queue.dequeue(current_time);
-            }
+        self.processed += 1;
+        let delay = self.delay();
+        let Some(queue) = &mut self.queue else {
+            self.state = ProcessBlockState::Idle;
+            return;
+        };
+        match queue.length {
+            0 => self.state = ProcessBlockState::Idle,
+            1 => queue.dequeue(current_time),
             _ => {
-                self.queue.dequeue(current_time);
-                event_queue.push(Event(current_time + self.delay(), self.id, EventType::Out));
+                queue.dequeue(current_time);
+                event_queue.push(Event(current_time + delay, self.id, EventType::Out));
             }
         }
     }

@@ -4,8 +4,6 @@ use std::time::{Duration, Instant};
 pub struct Queue {
     pub length: usize,
     pub capacity: Option<usize>,
-    pub processed: usize,
-    pub rejections: usize,
     lengths: Vec<(Instant, usize)>,
 }
 
@@ -14,8 +12,6 @@ impl Queue {
         Self {
             length: 0,
             capacity: Some(capacity),
-            processed: 0,
-            rejections: 0,
             lengths: Vec::new(),
         }
     }
@@ -27,16 +23,15 @@ impl Queue {
 
     pub fn dequeue(&mut self, current_time: Instant) {
         self.length -= 1;
-        self.processed += 1;
         self.lengths.push((current_time, self.length));
     }
 
     pub fn total_waited_time(&self) -> f32 {
         let mut total = 0.0;
         let mut iter = self.lengths.iter();
-        let (mut current_time, _) = iter
-            .next()
-            .expect("queue lengths must contain at least one element");
+        let Some((mut current_time, _)) = iter.next() else {
+            return 0.0;
+        };
         for &(time, length) in iter {
             total += (time - current_time).as_secs_f32() * length as f32;
             current_time = time;
@@ -44,15 +39,21 @@ impl Queue {
         total
     }
 
-    pub fn average_waited_time(&self) -> f32 {
-        self.total_waited_time() / self.processed as f32
-    }
-
     pub fn duration(&self) -> Duration {
-        self.lengths.last().unwrap().0 - self.lengths.first().unwrap().0
+        let Some(&first) = self.lengths.first().map(|(time, _)| time) else {
+            return Duration::from_secs(0);
+        };
+        let Some(&last) = self.lengths.last().map(|(time, _)| time) else {
+            return Duration::from_secs(0);
+        };
+        last - first
     }
 
     pub fn average_length(&self) -> f32 {
+        let duration = self.duration();
+        if duration.is_zero() {
+            return 0.0;
+        }
         self.total_waited_time() / self.duration().as_secs_f32()
     }
 }

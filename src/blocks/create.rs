@@ -100,8 +100,6 @@ impl Block for CreateBlock {
         event_queue.push(Event(current_time, self.id, EventType::Out));
     }
 
-    fn process_in(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {}
-
     fn process_out(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
         event_queue.push(Event(current_time + self.delay(), self.id, EventType::Out));
         self.created_events += 1;

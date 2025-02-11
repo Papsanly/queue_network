@@ -41,11 +41,7 @@ impl Block for DisposeBlock {
         }
     }
 
-    fn init(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {}
-
     fn process_in(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {
         self.disposed_events += 1;
     }
-
-    fn process_out(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {}
 }

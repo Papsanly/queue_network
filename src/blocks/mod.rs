@@ -5,6 +5,7 @@ use process::ProcessBlock as Process;
 pub use create::CreateBlock;
 pub use dispose::DisposeBlock;
 pub use process::ProcessBlock;
+pub use queue::Queue;
 
 use crate::events::Event;
 use rand::Rng;
@@ -23,9 +24,9 @@ pub trait Block {
     fn id(&self) -> BlockId;
     fn next(&self) -> Option<BlockId>;
     fn stats(&self) -> Self::Stats;
-    fn init(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant);
-    fn process_in(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant);
-    fn process_out(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant);
+    fn init(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {}
+    fn process_in(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {}
+    fn process_out(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {}
 }
 
 macro_rules! impl_distribution {
