@@ -1,10 +1,10 @@
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 #[derive(Default)]
 pub struct Queue {
     pub length: usize,
     pub capacity: Option<usize>,
-    lengths: Vec<(Instant, usize)>,
+    lengths: Vec<(Duration, usize)>,
 }
 
 impl Queue {
@@ -16,14 +16,14 @@ impl Queue {
         }
     }
 
-    pub fn enqueue(&mut self, current_time: Instant) {
+    pub fn enqueue(&mut self, simulation_duration: Duration) {
         self.length += 1;
-        self.lengths.push((current_time, self.length));
+        self.lengths.push((simulation_duration, self.length));
     }
 
-    pub fn dequeue(&mut self, current_time: Instant) {
+    pub fn dequeue(&mut self, simulation_duration: Duration) {
         self.length -= 1;
-        self.lengths.push((current_time, self.length));
+        self.lengths.push((simulation_duration, self.length));
     }
 
     pub fn total_weighted_time(&self) -> f32 {
@@ -40,13 +40,10 @@ impl Queue {
     }
 
     pub fn duration(&self) -> Duration {
-        let Some(&first) = self.lengths.first().map(|(time, _)| time) else {
-            return Duration::from_secs(0);
-        };
         let Some(&last) = self.lengths.last().map(|(time, _)| time) else {
             return Duration::from_secs(0);
         };
-        last - first
+        last
     }
 
     pub fn average_length(&self) -> f32 {

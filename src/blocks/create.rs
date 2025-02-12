@@ -4,10 +4,7 @@ use crate::{
     routers::{Router, RouterType},
 };
 use rand::{rng, Rng};
-use std::{
-    collections::BinaryHeap,
-    time::{Duration, Instant},
-};
+use std::{collections::BinaryHeap, time::Duration};
 
 pub struct CreateBlockBuilder<Distribution, Router> {
     id: BlockId,
@@ -101,12 +98,16 @@ impl Block for CreateBlock {
         }
     }
 
-    fn init(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
-        event_queue.push(Event(current_time, self.id, EventType::Out));
+    fn init(&mut self, event_queue: &mut BinaryHeap<Event>) {
+        event_queue.push(Event(Duration::from_secs(0), self.id, EventType::Out));
     }
 
-    fn process_out(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
-        event_queue.push(Event(current_time + self.delay(), self.id, EventType::Out));
+    fn process_out(&mut self, event_queue: &mut BinaryHeap<Event>, simulation_duration: Duration) {
+        event_queue.push(Event(
+            simulation_duration + self.delay(),
+            self.id,
+            EventType::Out,
+        ));
         self.created_events += 1;
     }
 }

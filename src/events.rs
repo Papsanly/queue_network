@@ -1,5 +1,5 @@
 use crate::blocks::BlockId;
-use std::{cmp::Ordering, time::Instant};
+use std::{cmp::Ordering, time::Duration};
 
 #[derive(Debug, Copy, Clone)]
 pub enum EventType {
@@ -7,7 +7,7 @@ pub enum EventType {
     Out,
 }
 
-pub struct Event(pub Instant, pub BlockId, pub EventType);
+pub struct Event(pub Duration, pub BlockId, pub EventType);
 
 impl PartialEq<Event> for Event {
     fn eq(&self, other: &Self) -> bool {

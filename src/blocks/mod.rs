@@ -9,7 +9,7 @@ pub use process::ProcessBlock;
 use crate::events::Event;
 use rand::Rng;
 use rand_distr::{Exp, Normal, Uniform};
-use std::{collections::BinaryHeap, fmt::Debug, time::Instant};
+use std::{collections::BinaryHeap, fmt::Debug, time::Duration};
 
 mod create;
 mod dispose;
@@ -24,9 +24,15 @@ pub trait Block {
     fn next(&self) -> Option<BlockId>;
     fn step_stats(&self) -> Self::StepStats;
     fn stats(&self) -> Self::Stats;
-    fn init(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {}
-    fn process_in(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {}
-    fn process_out(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {}
+    fn init(&mut self, _event_queue: &mut BinaryHeap<Event>) {}
+    fn process_in(&mut self, _event_queue: &mut BinaryHeap<Event>, _simulation_duration: Duration) {
+    }
+    fn process_out(
+        &mut self,
+        _event_queue: &mut BinaryHeap<Event>,
+        _simulation_duration: Duration,
+    ) {
+    }
 }
 
 macro_rules! impl_distribution {
@@ -101,21 +107,21 @@ macro_rules! impl_block {
                 }
             }
 
-            fn init(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
+            fn init(&mut self, event_queue: &mut BinaryHeap<Event>) {
                 match self {
-                    $($enum_name::$name(block) => block.init(event_queue, current_time),)*
+                    $($enum_name::$name(block) => block.init(event_queue),)*
                 }
             }
 
-            fn process_in(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
+            fn process_in(&mut self, event_queue: &mut BinaryHeap<Event>, simulation_duration: Duration) {
                 match self {
-                    $($enum_name::$name(block) => block.process_in(event_queue, current_time),)*
+                    $($enum_name::$name(block) => block.process_in(event_queue, simulation_duration),)*
                 }
             }
 
-            fn process_out(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
+            fn process_out(&mut self, event_queue: &mut BinaryHeap<Event>, simulation_duration: Duration) {
                 match self {
-                    $($enum_name::$name(block) => block.process_out(event_queue, current_time),)*
+                    $($enum_name::$name(block) => block.process_out(event_queue, simulation_duration),)*
                 }
             }
         }

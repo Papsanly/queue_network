@@ -1,9 +1,9 @@
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 pub struct Devices {
     pub count: usize,
     pub idle: usize,
-    pub workloads: Vec<(Instant, f32)>,
+    pub workloads: Vec<(Duration, f32)>,
 }
 
 impl Default for Devices {
@@ -21,15 +21,15 @@ impl Devices {
         }
     }
 
-    pub fn load(&mut self, current_time: Instant) {
+    pub fn load(&mut self, simulation_duration: Duration) {
         self.idle = self.idle.checked_sub(1).expect("all devices are busy");
-        self.workloads.push((current_time, self.workload()));
+        self.workloads.push((simulation_duration, self.workload()));
     }
 
-    pub fn unload(&mut self, current_time: Instant) {
+    pub fn unload(&mut self, simulation_duration: Duration) {
         if self.count != self.idle {
             self.idle += 1;
-            self.workloads.push((current_time, self.workload()));
+            self.workloads.push((simulation_duration, self.workload()));
         }
     }
 
@@ -51,13 +51,10 @@ impl Devices {
     }
 
     pub fn duration(&self) -> Duration {
-        let Some(&first) = self.workloads.first().map(|(time, _)| time) else {
-            return Duration::from_secs(0);
-        };
         let Some(&last) = self.workloads.last().map(|(time, _)| time) else {
             return Duration::from_secs(0);
         };
-        last - first
+        last
     }
 
     pub fn average_workload(&self) -> f32 {

@@ -8,6 +8,7 @@ mod routers;
 use crate::{
     blocks::{Block, CreateBlock, DisposeBlock, ProcessBlock},
     devices::Devices,
+    events::Event,
     network::QueueNetwork,
     queue::Queue,
     routers::{DirectRouter, ProbabilityRouter},
@@ -49,12 +50,13 @@ fn main() {
                 .build(),
         )
         .add_block(DisposeBlock::new("dispose"))
-        .on_simulation_step(|elapsed_time, block, event_type| {
+        .on_simulation_step(|network, Event(time, block_id, event_type)| {
+            let block = network.blocks.get(block_id).unwrap();
             println!(
                 "Elapsed Time: {:.3} | Event: {:?} {}: {:#?}",
-                elapsed_time.as_secs_f32(),
+                time.as_secs_f32(),
                 event_type,
-                block.id(),
+                block_id,
                 block.step_stats()
             );
         });

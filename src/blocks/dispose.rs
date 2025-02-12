@@ -2,7 +2,7 @@ use crate::{
     blocks::{Block, BlockId},
     events::Event,
 };
-use std::{collections::BinaryHeap, time::Instant};
+use std::{collections::BinaryHeap, time::Duration};
 
 #[allow(unused)]
 #[derive(Debug)]
@@ -46,7 +46,7 @@ impl Block for DisposeBlock {
         }
     }
 
-    fn process_in(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {
+    fn process_in(&mut self, _event_queue: &mut BinaryHeap<Event>, _simulation_duration: Duration) {
         self.disposed_events += 1;
     }
 }

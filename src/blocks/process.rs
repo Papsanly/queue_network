@@ -6,10 +6,7 @@ use crate::{
     routers::{Router, RouterType},
 };
 use rand::{rng, Rng};
-use std::{
-    collections::BinaryHeap,
-    time::{Duration, Instant},
-};
+use std::{collections::BinaryHeap, time::Duration};
 
 #[allow(unused)]
 #[derive(Debug)]
@@ -169,35 +166,39 @@ impl Block for ProcessBlock {
         }
     }
 
-    fn process_in(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
+    fn process_in(&mut self, event_queue: &mut BinaryHeap<Event>, simulation_duration: Duration) {
         if self.devices.idle != 0 {
-            event_queue.push(Event(current_time + self.delay(), self.id, EventType::Out));
-            self.devices.load(current_time);
+            event_queue.push(Event(
+                simulation_duration + self.delay(),
+                self.id,
+                EventType::Out,
+            ));
+            self.devices.load(simulation_duration);
         } else {
             let Some(queue) = &mut self.queue else {
                 self.rejections += 1;
                 return;
             };
             if queue.length < queue.capacity.unwrap_or(usize::MAX) {
-                queue.enqueue(current_time);
+                queue.enqueue(simulation_duration);
             } else {
                 self.rejections += 1;
             }
         }
     }
 
-    fn process_out(&mut self, event_queue: &mut BinaryHeap<Event>, current_time: Instant) {
+    fn process_out(&mut self, event_queue: &mut BinaryHeap<Event>, simulation_duration: Duration) {
         self.processed += 1;
         let delay = self.delay();
         let Some(queue) = &mut self.queue else {
-            self.devices.unload(current_time);
+            self.devices.unload(simulation_duration);
             return;
         };
         if queue.length == 0 {
-            self.devices.unload(current_time);
+            self.devices.unload(simulation_duration);
         } else {
-            queue.dequeue(current_time);
-            event_queue.push(Event(current_time + delay, self.id, EventType::Out));
+            queue.dequeue(simulation_duration);
+            event_queue.push(Event(simulation_duration + delay, self.id, EventType::Out));
         }
     }
 }

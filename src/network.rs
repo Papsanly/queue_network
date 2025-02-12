@@ -4,14 +4,14 @@ use crate::{
 };
 use std::{
     collections::{BinaryHeap, HashMap},
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 pub struct QueueNetwork {
     event_queue: BinaryHeap<Event>,
     real_time: bool,
     #[allow(clippy::type_complexity)]
-    on_simulation_step: Box<dyn Fn(Duration, &BlockType, EventType)>,
+    on_simulation_step: Box<dyn Fn(&QueueNetwork, Event)>,
     pub blocks: HashMap<BlockId, BlockType>,
 }
 
@@ -20,7 +20,7 @@ impl QueueNetwork {
         QueueNetwork {
             event_queue: BinaryHeap::new(),
             real_time: false,
-            on_simulation_step: Box::new(|_, _, _| {}),
+            on_simulation_step: Box::new(|_, _| {}),
             blocks: HashMap::new(),
         }
     }
@@ -40,27 +40,22 @@ impl QueueNetwork {
     #[allow(unused)]
     pub fn on_simulation_step(
         mut self,
-        on_simulation_step: impl Fn(Duration, &BlockType, EventType) + 'static,
+        on_simulation_step: impl Fn(&QueueNetwork, Event) + 'static,
     ) -> Self {
         self.on_simulation_step = Box::new(on_simulation_step);
         self
     }
 
     pub fn simulate(&mut self, duration: Duration) {
-        let start = Instant::now();
-        let end = start + duration;
-        let mut current_time = start;
-
         for block in self.blocks.values_mut() {
-            block.init(&mut self.event_queue, current_time);
+            block.init(&mut self.event_queue);
         }
 
         while let Some(Event(time, block_id, event_type)) = self.event_queue.pop() {
             if self.real_time {
-                std::thread::sleep(time - current_time);
+                std::thread::sleep(time);
             }
-            current_time = time;
-            if current_time >= end {
+            if time >= duration {
                 break;
             }
             let block = self
@@ -68,16 +63,15 @@ impl QueueNetwork {
                 .get_mut(&block_id)
                 .expect("event queue should only contain valid block ids");
             match event_type {
-                EventType::In => block.process_in(&mut self.event_queue, current_time),
+                EventType::In => block.process_in(&mut self.event_queue, time),
                 EventType::Out => {
-                    block.process_out(&mut self.event_queue, current_time);
+                    block.process_out(&mut self.event_queue, time);
                     if let Some(next) = block.next() {
-                        self.event_queue
-                            .push(Event(current_time, next, EventType::In));
+                        self.event_queue.push(Event(time, next, EventType::In));
                     }
                 }
             }
-            (self.on_simulation_step)(current_time - start, block, event_type);
+            (self.on_simulation_step)(&self, Event(time, block_id, event_type));
         }
     }
 }
