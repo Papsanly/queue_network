@@ -4,7 +4,7 @@ mod network;
 mod routers;
 
 use crate::{
-    blocks::{Block, CreateBlock, DisposeBlock, ProcessBlock, Queue},
+    blocks::{Block, CreateBlock, Devices, DisposeBlock, ProcessBlock, Queue},
     network::QueueNetwork,
     routers::{DirectRouter, ProbabilityRouter},
 };
@@ -30,6 +30,7 @@ fn main() {
             ProcessBlock::builder("process2")
                 .distribution(Exp::new(1.0).unwrap())
                 .queue(Queue::from_capacity(5))
+                .devices(Devices::new(2))
                 .router(DirectRouter::new("process3"))
                 .build(),
         )
@@ -37,7 +38,10 @@ fn main() {
             ProcessBlock::builder("process3")
                 .distribution(Exp::new(1.0).unwrap())
                 .queue(Queue::from_capacity(5))
-                .router(ProbabilityRouter::new(&[(1.0, "dispose")]))
+                .router(ProbabilityRouter::new(&[
+                    (0.5, "process2"),
+                    (0.5, "dispose"),
+                ]))
                 .build(),
         )
         .add_block(DisposeBlock::new("dispose"))

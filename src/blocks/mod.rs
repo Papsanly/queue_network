@@ -3,6 +3,7 @@ use dispose::DisposeBlock as Dispose;
 use process::ProcessBlock as Process;
 
 pub use create::CreateBlock;
+pub use devices::Devices;
 pub use dispose::DisposeBlock;
 pub use process::ProcessBlock;
 pub use queue::Queue;
@@ -13,6 +14,7 @@ use rand_distr::{Exp, Normal, Uniform};
 use std::{collections::BinaryHeap, fmt::Debug, time::Instant};
 
 mod create;
+mod devices;
 mod dispose;
 mod process;
 mod queue;

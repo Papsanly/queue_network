@@ -26,7 +26,7 @@ impl Queue {
         self.lengths.push((current_time, self.length));
     }
 
-    pub fn total_waited_time(&self) -> f32 {
+    pub fn total_weighted_time(&self) -> f32 {
         let mut total = 0.0;
         let mut iter = self.lengths.iter();
         let Some((mut current_time, _)) = iter.next() else {
@@ -50,6 +50,6 @@ impl Queue {
     }
 
     pub fn average_length(&self) -> f32 {
-        self.total_waited_time() / self.duration().as_secs_f32()
+        self.total_weighted_time() / self.duration().as_secs_f32()
     }
 }
