@@ -7,19 +7,20 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub struct QueueNetwork<F: Fn(Duration, &BlockType, EventType)> {
+pub struct QueueNetwork {
     event_queue: BinaryHeap<Event>,
     real_time: bool,
-    on_simulation_step: Option<F>,
+    #[allow(clippy::type_complexity)]
+    on_simulation_step: Box<dyn Fn(Duration, &BlockType, EventType)>,
     pub blocks: HashMap<BlockId, BlockType>,
 }
 
-impl<F: Fn(Duration, &BlockType, EventType)> QueueNetwork<F> {
-    pub fn new() -> Self {
-        Self {
+impl QueueNetwork {
+    pub fn new() -> QueueNetwork {
+        QueueNetwork {
             event_queue: BinaryHeap::new(),
             real_time: false,
-            on_simulation_step: None,
+            on_simulation_step: Box::new(|_, _, _| {}),
             blocks: HashMap::new(),
         }
     }
@@ -36,8 +37,12 @@ impl<F: Fn(Duration, &BlockType, EventType)> QueueNetwork<F> {
         self
     }
 
-    pub fn on_simulation_step(mut self, on_simulation_step: F) -> Self {
-        self.on_simulation_step = Some(on_simulation_step);
+    #[allow(unused)]
+    pub fn on_simulation_step(
+        mut self,
+        on_simulation_step: impl Fn(Duration, &BlockType, EventType) + 'static,
+    ) -> Self {
+        self.on_simulation_step = Box::new(on_simulation_step);
         self
     }
 
@@ -72,9 +77,7 @@ impl<F: Fn(Duration, &BlockType, EventType)> QueueNetwork<F> {
                     }
                 }
             }
-            if let Some(ref f) = self.on_simulation_step {
-                f(current_time - start, block, event_type)
-            }
+            (self.on_simulation_step)(current_time - start, block, event_type);
         }
     }
 }
