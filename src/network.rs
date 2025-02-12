@@ -71,7 +71,7 @@ impl QueueNetwork {
                     }
                 }
             }
-            (self.on_simulation_step)(&self, Event(time, block_id, event_type));
+            (self.on_simulation_step)(self, Event(time, block_id, event_type));
         }
     }
 }
