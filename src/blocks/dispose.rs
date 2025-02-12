@@ -25,6 +25,7 @@ impl DisposeBlock {
 }
 
 impl Block for DisposeBlock {
+    type StepStats = DisposeBlockStats;
     type Stats = DisposeBlockStats;
 
     fn id(&self) -> BlockId {
@@ -33,6 +34,10 @@ impl Block for DisposeBlock {
 
     fn next(&self) -> Option<BlockId> {
         None
+    }
+
+    fn step_stats(&self) -> Self::StepStats {
+        self.stats()
     }
 
     fn stats(&self) -> DisposeBlockStats {

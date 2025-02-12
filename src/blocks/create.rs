@@ -80,6 +80,7 @@ impl CreateBlock {
 }
 
 impl Block for CreateBlock {
+    type StepStats = CreateBlockStats;
     type Stats = CreateBlockStats;
 
     fn id(&self) -> BlockId {
@@ -88,6 +89,10 @@ impl Block for CreateBlock {
 
     fn next(&self) -> Option<BlockId> {
         self.router.next()
+    }
+
+    fn step_stats(&self) -> Self::StepStats {
+        self.stats()
     }
 
     fn stats(&self) -> CreateBlockStats {

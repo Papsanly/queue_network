@@ -20,9 +20,11 @@ mod queue;
 pub type BlockId = &'static str;
 
 pub trait Block {
+    type StepStats;
     type Stats;
     fn id(&self) -> BlockId;
     fn next(&self) -> Option<BlockId>;
+    fn step_stats(&self) -> Self::StepStats;
     fn stats(&self) -> Self::Stats;
     fn init(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {}
     fn process_in(&mut self, _event_queue: &mut BinaryHeap<Event>, _current_time: Instant) {}
@@ -74,6 +76,7 @@ macro_rules! impl_block {
         )*
 
         impl Block for $enum_name {
+            type StepStats = Box<dyn Debug>;
             type Stats = Box<dyn Debug>;
 
             fn id(&self) -> BlockId {
@@ -85,6 +88,12 @@ macro_rules! impl_block {
             fn next(&self) -> Option<BlockId> {
                 match self {
                     $($enum_name::$name(block) => block.next(),)*
+                }
+            }
+
+            fn step_stats(&self) -> Box<dyn Debug> {
+                match self {
+                    $($enum_name::$name(block) => Box::new(block.step_stats()),)*
                 }
             }
 

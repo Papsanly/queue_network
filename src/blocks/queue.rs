@@ -50,10 +50,6 @@ impl Queue {
     }
 
     pub fn average_length(&self) -> f32 {
-        let duration = self.duration();
-        if duration.is_zero() {
-            return 0.0;
-        }
         self.total_waited_time() / self.duration().as_secs_f32()
     }
 }

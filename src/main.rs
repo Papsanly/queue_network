@@ -47,13 +47,13 @@ fn main() {
                 elapsed_time.as_secs_f32(),
                 event_type,
                 block.id(),
-                block.stats()
+                block.step_stats()
             );
         });
 
     network.simulate(Duration::from_secs(1000));
 
-    println!("Final Simulation State:");
+    println!("\nFinal Simulation State:");
     let mut blocks = network.blocks.values().collect::<Vec<_>>();
     blocks.sort_by_key(|block| match block.id() {
         "create" => "0".to_string(),

@@ -17,13 +17,24 @@ pub enum ProcessBlockState {
 
 #[allow(unused)]
 #[derive(Debug)]
-pub struct ProcessBlockStats {
+pub struct ProcessBlockStepStats {
     pub processed: usize,
     pub rejections: usize,
     pub state: ProcessBlockState,
     pub rejection_probability: f32,
-    pub average_queue_length: Option<f32>,
-    pub average_waited_time: Option<f32>,
+    pub queue_length: usize,
+}
+
+#[allow(unused)]
+#[derive(Debug)]
+pub struct ProcessBlockStats {
+    pub processed: usize,
+    pub rejections: usize,
+    pub final_state: ProcessBlockState,
+    pub rejection_probability: f32,
+    pub final_queue_length: usize,
+    pub average_queue_length: f32,
+    pub average_waited_time: f32,
 }
 
 pub struct ProcessBlock {
@@ -108,6 +119,7 @@ impl ProcessBlock {
 }
 
 impl Block for ProcessBlock {
+    type StepStats = ProcessBlockStepStats;
     type Stats = ProcessBlockStats;
 
     fn id(&self) -> BlockId {
@@ -118,18 +130,35 @@ impl Block for ProcessBlock {
         self.router.next()
     }
 
+    fn step_stats(&self) -> ProcessBlockStepStats {
+        ProcessBlockStepStats {
+            processed: self.processed,
+            rejections: self.rejections,
+            rejection_probability: self.rejections as f32
+                / (self.rejections + self.processed) as f32,
+            state: self.state,
+            queue_length: self.queue.as_ref().map(|q| q.length).unwrap_or(0),
+        }
+    }
+
     fn stats(&self) -> ProcessBlockStats {
         ProcessBlockStats {
             processed: self.processed,
             rejections: self.rejections,
             rejection_probability: self.rejections as f32
                 / (self.rejections + self.processed) as f32,
-            state: self.state,
-            average_queue_length: self.queue.as_ref().map(|q| q.average_length()),
+            final_state: self.state,
+            final_queue_length: self.queue.as_ref().map(|q| q.length).unwrap_or(0),
+            average_queue_length: self
+                .queue
+                .as_ref()
+                .map(|q| q.average_length())
+                .unwrap_or(0.0),
             average_waited_time: self
                 .queue
                 .as_ref()
-                .map(|q| q.total_waited_time() / self.processed as f32),
+                .map(|q| q.total_waited_time() / self.processed as f32)
+                .unwrap_or(0.0),
         }
     }
 
@@ -160,13 +189,11 @@ impl Block for ProcessBlock {
             self.state = ProcessBlockState::Idle;
             return;
         };
-        match queue.length {
-            0 => self.state = ProcessBlockState::Idle,
-            1 => queue.dequeue(current_time),
-            _ => {
-                queue.dequeue(current_time);
-                event_queue.push(Event(current_time + delay, self.id, EventType::Out));
-            }
+        if queue.length == 0 {
+            self.state = ProcessBlockState::Idle;
+        } else {
+            queue.dequeue(current_time);
+            event_queue.push(Event(current_time + delay, self.id, EventType::Out));
         }
     }
 }
