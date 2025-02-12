@@ -1,11 +1,15 @@
 mod blocks;
+mod devices;
 mod events;
 mod network;
+mod queue;
 mod routers;
 
 use crate::{
-    blocks::{Block, CreateBlock, Devices, DisposeBlock, ProcessBlock, Queue},
+    blocks::{Block, CreateBlock, DisposeBlock, ProcessBlock},
+    devices::Devices,
     network::QueueNetwork,
+    queue::Queue,
     routers::{DirectRouter, ProbabilityRouter},
 };
 use rand_distr::Exp;

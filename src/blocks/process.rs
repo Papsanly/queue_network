@@ -1,6 +1,8 @@
 use crate::{
-    blocks::{devices::Devices, queue::Queue, Block, BlockId, DistributionType},
+    blocks::{Block, BlockId, DistributionType},
+    devices::Devices,
     events::{Event, EventType},
+    queue::Queue,
     routers::{Router, RouterType},
 };
 use rand::{rng, Rng};
