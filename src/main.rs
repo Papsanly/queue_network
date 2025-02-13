@@ -7,11 +7,10 @@ mod routers;
 
 use crate::{
     blocks::{Block, CreateBlock, DisposeBlock, ProcessBlock},
-    devices::Devices,
     events::Event,
     network::QueueNetwork,
     queue::Queue,
-    routers::{DirectRouter, ProbabilityRouter},
+    routers::{DirectRouter, ShortestQueueRouter},
 };
 use rand_distr::Exp;
 use std::time::Duration;
@@ -20,33 +19,22 @@ fn main() {
     let mut network = QueueNetwork::new()
         .add_block(
             CreateBlock::builder("create")
-                .distribution(Exp::new(0.5).unwrap())
-                .router(DirectRouter::new("process1"))
+                .distribution(Exp::new(1.0 / 2.0).unwrap())
+                .router(ShortestQueueRouter::new(&["process1", "process2"]))
                 .build(),
         )
         .add_block(
             ProcessBlock::builder("process1")
-                .distribution(Exp::new(1.0).unwrap())
-                .queue(Queue::from_capacity(5))
-                .router(DirectRouter::new("process2"))
+                .distribution(Exp::new(1.0 / 0.3).unwrap())
+                .queue(Queue::from_capacity(3))
+                .router(DirectRouter::new("dispose"))
                 .build(),
         )
         .add_block(
             ProcessBlock::builder("process2")
-                .distribution(Exp::new(1.0).unwrap())
-                .queue(Queue::from_capacity(5))
-                .devices(Devices::new(2))
-                .router(DirectRouter::new("process3"))
-                .build(),
-        )
-        .add_block(
-            ProcessBlock::builder("process3")
-                .distribution(Exp::new(1.0).unwrap())
-                .queue(Queue::from_capacity(5))
-                .router(ProbabilityRouter::new(&[
-                    (0.5, "process2"),
-                    (0.5, "dispose"),
-                ]))
+                .distribution(Exp::new(1.0 / 0.3).unwrap())
+                .queue(Queue::from_capacity(3))
+                .router(DirectRouter::new("dispose"))
                 .build(),
         )
         .add_block(DisposeBlock::new("dispose"))

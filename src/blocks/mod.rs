@@ -9,7 +9,11 @@ pub use process::ProcessBlock;
 use crate::events::Event;
 use rand::Rng;
 use rand_distr::{Exp, Normal, Uniform};
-use std::{collections::BinaryHeap, fmt::Debug, time::Duration};
+use std::{
+    collections::{BinaryHeap, HashMap},
+    fmt::Debug,
+    time::Duration,
+};
 
 mod create;
 mod dispose;
@@ -21,7 +25,7 @@ pub trait Block {
     type StepStats;
     type Stats;
     fn id(&self) -> BlockId;
-    fn next(&self) -> Option<BlockId>;
+    fn next(&self, blocks: &HashMap<BlockId, BlockType>) -> Option<BlockId>;
     fn step_stats(&self) -> Self::StepStats;
     fn stats(&self) -> Self::Stats;
     fn init(&mut self, _event_queue: &mut BinaryHeap<Event>) {}
@@ -89,9 +93,9 @@ macro_rules! impl_block {
                 }
             }
 
-            fn next(&self) -> Option<BlockId> {
+            fn next(&self, blocks: &HashMap<BlockId, BlockType>) -> Option<BlockId> {
                 match self {
-                    $($enum_name::$name(block) => block.next(),)*
+                    $($enum_name::$name(block) => block.next(blocks),)*
                 }
             }
 
