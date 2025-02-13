@@ -1,10 +1,13 @@
 use crate::{
-    blocks::{Block, BlockId, DistributionType},
+    blocks::{Block, BlockId, BlockType, DistributionType},
     events::{Event, EventType},
     routers::{Router, RouterType},
 };
 use rand::{rng, Rng};
-use std::{collections::BinaryHeap, time::Duration};
+use std::{
+    collections::{BinaryHeap, HashMap},
+    time::Duration,
+};
 
 pub struct CreateBlockBuilder<Distribution, Router> {
     id: BlockId,
@@ -84,8 +87,8 @@ impl Block for CreateBlock {
         self.id
     }
 
-    fn next(&self) -> Option<BlockId> {
-        self.router.next()
+    fn next(&self, blocks: &HashMap<BlockId, BlockType>) -> Option<BlockId> {
+        self.router.next(blocks)
     }
 
     fn step_stats(&self) -> Self::StepStats {

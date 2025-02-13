@@ -1,8 +1,11 @@
 use crate::{
-    blocks::{Block, BlockId},
+    blocks::{Block, BlockId, BlockType},
     events::Event,
 };
-use std::{collections::BinaryHeap, time::Duration};
+use std::{
+    collections::{BinaryHeap, HashMap},
+    time::Duration,
+};
 
 #[allow(unused)]
 #[derive(Debug)]
@@ -32,7 +35,7 @@ impl Block for DisposeBlock {
         self.id
     }
 
-    fn next(&self) -> Option<BlockId> {
+    fn next(&self, _blocks: &HashMap<BlockId, BlockType>) -> Option<BlockId> {
         None
     }
 

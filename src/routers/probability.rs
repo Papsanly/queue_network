@@ -1,5 +1,9 @@
-use crate::{blocks::BlockId, routers::Router};
+use crate::{
+    blocks::{BlockId, BlockType},
+    routers::Router,
+};
 use rand::{rng, Rng};
+use std::collections::HashMap;
 
 pub struct ProbabilityRouter {
     next: Vec<(f32, BlockId)>,
@@ -15,7 +19,7 @@ impl ProbabilityRouter {
 }
 
 impl Router for ProbabilityRouter {
-    fn next(&self) -> Option<BlockId> {
+    fn next(&self, _blocks: &HashMap<BlockId, BlockType>) -> Option<BlockId> {
         let random = rng().random::<f32>();
 
         let mut sum = 0.0;

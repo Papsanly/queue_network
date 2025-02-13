@@ -1,4 +1,8 @@
-use crate::{blocks::BlockId, routers::Router};
+use crate::{
+    blocks::{BlockId, BlockType},
+    routers::Router,
+};
+use std::collections::HashMap;
 
 pub struct DirectRouter {
     next: BlockId,
@@ -11,7 +15,7 @@ impl DirectRouter {
 }
 
 impl Router for DirectRouter {
-    fn next(&self) -> Option<BlockId> {
+    fn next(&self, _blocks: &HashMap<BlockId, BlockType>) -> Option<BlockId> {
         Some(self.next)
     }
 }

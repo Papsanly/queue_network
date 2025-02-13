@@ -58,15 +58,18 @@ impl QueueNetwork {
             if time >= duration {
                 break;
             }
-            let block = self
+            let expect_message = "event queue should only contain valid block ids";
+            let next = self
                 .blocks
-                .get_mut(&block_id)
-                .expect("event queue should only contain valid block ids");
+                .get(block_id)
+                .expect(expect_message)
+                .next(&self.blocks);
+            let block = self.blocks.get_mut(block_id).expect(expect_message);
             match event_type {
                 EventType::In => block.process_in(&mut self.event_queue, time),
                 EventType::Out => {
                     block.process_out(&mut self.event_queue, time);
-                    if let Some(next) = block.next() {
+                    if let Some(next) = next {
                         self.event_queue.push(Event(time, next, EventType::In));
                     }
                 }

@@ -1,12 +1,15 @@
 use crate::{
-    blocks::{Block, BlockId, DistributionType},
+    blocks::{Block, BlockId, BlockType, DistributionType},
     devices::Devices,
     events::{Event, EventType},
     queue::Queue,
     routers::{Router, RouterType},
 };
 use rand::{rng, Rng};
-use std::{collections::BinaryHeap, time::Duration};
+use std::{
+    collections::{BinaryHeap, HashMap},
+    time::Duration,
+};
 
 #[allow(unused)]
 #[derive(Debug)]
@@ -129,8 +132,8 @@ impl Block for ProcessBlock {
         self.id
     }
 
-    fn next(&self) -> Option<BlockId> {
-        self.router.next()
+    fn next(&self, blocks: &HashMap<BlockId, BlockType>) -> Option<BlockId> {
+        self.router.next(blocks)
     }
 
     fn step_stats(&self) -> ProcessBlockStepStats {

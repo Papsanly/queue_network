@@ -1,12 +1,18 @@
 mod direct;
 mod probability;
+mod shortest_queue;
 
-use crate::blocks::BlockId;
+use crate::blocks::{BlockId, BlockType};
+use direct::DirectRouter as Direct;
 pub use direct::DirectRouter;
+use probability::ProbabilityRouter as Probability;
 pub use probability::ProbabilityRouter;
+use shortest_queue::ShortestQueueRouter as ShortestQueue;
+pub use shortest_queue::ShortestQueueRouter;
+use std::collections::HashMap;
 
 pub trait Router {
-    fn next(&self) -> Option<BlockId>;
+    fn next(&self, blocks: &HashMap<BlockId, BlockType>) -> Option<BlockId>;
 }
 
 macro_rules! impl_router {
@@ -24,9 +30,9 @@ macro_rules! impl_router {
         )*
 
         impl Router for $enum_name {
-            fn next(&self) -> Option<BlockId> {
+            fn next(&self, blocks: &HashMap<BlockId, BlockType>) -> Option<BlockId> {
                 match self {
-                    $($enum_name::$name(router) => router.next(),)*
+                    $($enum_name::$name(router) => router.next(blocks),)*
                 }
             }
         }
@@ -34,6 +40,7 @@ macro_rules! impl_router {
 }
 
 impl_router!(RouterType {
-    DirectRouter,
-    ProbabilityRouter
+    Direct,
+    Probability,
+    ShortestQueue
 });
