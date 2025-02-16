@@ -59,7 +59,11 @@ impl QueueNetwork {
                 break;
             }
             let expect_message = "event queue should only contain valid block ids";
-            let next = self.blocks.get(block_id).expect(expect_message).next(&self.blocks);
+            let next = self
+                .blocks
+                .get(block_id)
+                .expect(expect_message)
+                .next(&self.blocks);
             let block = self.blocks.get_mut(block_id).expect(expect_message);
             match event_type {
                 EventType::In => block.process_in(&mut self.event_queue, time),
