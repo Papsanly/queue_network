@@ -23,7 +23,7 @@ impl Router for ShortestQueueRouter {
             .filter(|(block_id, _)| self.routes.contains(block_id))
             .min_by_key(|(_, block)| {
                 let BlockType::Process(block) = block else {
-                    return 0;
+                    panic!("ShortestQueueRouter only works with Process blocks");
                 };
                 block.queue.as_ref().map(|q| q.length).unwrap_or(0)
             })
