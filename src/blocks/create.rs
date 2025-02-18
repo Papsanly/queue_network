@@ -52,14 +52,14 @@ pub struct CreateBlockStats {
     pub created_events: usize,
 }
 
-pub struct CreateBlock<D: Distribution<f32>, R: Router> {
+pub struct CreateBlock<D, R> {
     pub id: BlockId,
     pub created_events: usize,
     router: R,
     distribution: D,
 }
 
-impl<D: Distribution<f32>, R: Router> CreateBlock<D, R> {
+impl CreateBlock<(), ()> {
     pub fn builder(id: BlockId) -> CreateBlockBuilder<(), ()> {
         CreateBlockBuilder {
             id,
@@ -67,7 +67,9 @@ impl<D: Distribution<f32>, R: Router> CreateBlock<D, R> {
             distribution: (),
         }
     }
+}
 
+impl<D: Distribution<f32>, R: Router> CreateBlock<D, R> {
     fn delay(&self) -> Duration {
         Duration::from_secs_f32(rng().sample(&self.distribution))
     }

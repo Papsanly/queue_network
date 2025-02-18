@@ -33,7 +33,7 @@ pub struct ProcessBlockStats {
     pub average_waited_time: f32,
 }
 
-pub struct ProcessBlock<D: Distribution<f32>, R: Router> {
+pub struct ProcessBlock<D, R> {
     pub id: BlockId,
     pub queue: Option<Queue>,
     pub devices: Devices,
@@ -101,7 +101,7 @@ impl<D: Distribution<f32>, R: Router> ProcessBlockBuilder<D, R> {
     }
 }
 
-impl<D: Distribution<f32>, R: Router> ProcessBlock<D, R> {
+impl ProcessBlock<(), ()> {
     pub fn builder(id: BlockId) -> ProcessBlockBuilder<(), ()> {
         ProcessBlockBuilder {
             id,
@@ -111,7 +111,9 @@ impl<D: Distribution<f32>, R: Router> ProcessBlock<D, R> {
             queue: None,
         }
     }
+}
 
+impl<D: Distribution<f32>, R: Router> ProcessBlock<D, R> {
     fn delay(&self) -> Duration {
         Duration::from_secs_f32(rng().sample(&self.distribution))
     }
