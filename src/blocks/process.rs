@@ -1,17 +1,17 @@
 use crate::{
-    blocks::{Block, BlockId, BlockType, DistributionType},
+    blocks::{Block, BlockId},
     devices::Devices,
     events::{Event, EventType},
     queue::Queue,
-    routers::{Router, RouterType},
+    routers::Router,
 };
-use rand::{rng, Rng};
+use rand::{distr::Distribution, rng, Rng};
 use std::{
     collections::{BinaryHeap, HashMap},
+    fmt::Debug,
     time::Duration,
 };
 
-#[allow(unused)]
 #[derive(Debug)]
 pub struct ProcessBlockStepStats {
     pub processed: usize,
@@ -21,7 +21,6 @@ pub struct ProcessBlockStepStats {
     pub queue_length: usize,
 }
 
-#[allow(unused)]
 #[derive(Debug)]
 pub struct ProcessBlockStats {
     pub processed: usize,
@@ -34,14 +33,14 @@ pub struct ProcessBlockStats {
     pub average_waited_time: f32,
 }
 
-pub struct ProcessBlock {
+pub struct ProcessBlock<D: Distribution<f32>, R: Router> {
     pub id: BlockId,
     pub queue: Option<Queue>,
     pub devices: Devices,
     pub processed: usize,
     pub rejections: usize,
-    router: RouterType,
-    distribution: DistributionType,
+    router: R,
+    distribution: D,
 }
 
 pub struct ProcessBlockBuilder<Distribution, Router> {
@@ -52,26 +51,20 @@ pub struct ProcessBlockBuilder<Distribution, Router> {
     queue: Option<Queue>,
 }
 
-impl<Distribution> ProcessBlockBuilder<Distribution, ()> {
-    pub fn router(
-        self,
-        router: impl Into<RouterType>,
-    ) -> ProcessBlockBuilder<Distribution, RouterType> {
+impl<D> ProcessBlockBuilder<D, ()> {
+    pub fn router<R: Router>(self, router: R) -> ProcessBlockBuilder<D, R> {
         ProcessBlockBuilder {
             id: self.id,
             queue: self.queue,
             devices: self.devices,
             distribution: self.distribution,
-            router: router.into(),
+            router,
         }
     }
 }
 
-impl<Router> ProcessBlockBuilder<(), Router> {
-    pub fn distribution(
-        self,
-        distribution: impl Into<DistributionType>,
-    ) -> ProcessBlockBuilder<DistributionType, Router> {
+impl<R> ProcessBlockBuilder<(), R> {
+    pub fn distribution<D: Distribution<f32>>(self, distribution: D) -> ProcessBlockBuilder<D, R> {
         ProcessBlockBuilder {
             id: self.id,
             router: self.router,
@@ -94,8 +87,8 @@ impl<Distribution, Router> ProcessBlockBuilder<Distribution, Router> {
     }
 }
 
-impl ProcessBlockBuilder<DistributionType, RouterType> {
-    pub fn build(self) -> ProcessBlock {
+impl<D: Distribution<f32>, R: Router> ProcessBlockBuilder<D, R> {
+    pub fn build(self) -> ProcessBlock<D, R> {
         ProcessBlock {
             id: self.id,
             queue: self.queue,
@@ -108,7 +101,7 @@ impl ProcessBlockBuilder<DistributionType, RouterType> {
     }
 }
 
-impl ProcessBlock {
+impl<D: Distribution<f32>, R: Router> ProcessBlock<D, R> {
     pub fn builder(id: BlockId) -> ProcessBlockBuilder<(), ()> {
         ProcessBlockBuilder {
             id,
@@ -124,31 +117,28 @@ impl ProcessBlock {
     }
 }
 
-impl Block for ProcessBlock {
-    type StepStats = ProcessBlockStepStats;
-    type Stats = ProcessBlockStats;
-
+impl<D: Distribution<f32>, R: Router> Block for ProcessBlock<D, R> {
     fn id(&self) -> BlockId {
         self.id
     }
 
-    fn next(&self, blocks: &HashMap<BlockId, BlockType>) -> Option<BlockId> {
+    fn next(&self, blocks: &HashMap<BlockId, Box<dyn Block>>) -> Option<BlockId> {
         self.router.next(blocks)
     }
 
-    fn step_stats(&self) -> ProcessBlockStepStats {
-        ProcessBlockStepStats {
+    fn step_stats(&self) -> Box<dyn Debug> {
+        Box::new(ProcessBlockStepStats {
             processed: self.processed,
             rejections: self.rejections,
             workload: self.devices.workload(),
             rejection_probability: self.rejections as f32
                 / (self.rejections + self.processed) as f32,
             queue_length: self.queue.as_ref().map(|q| q.length).unwrap_or(0),
-        }
+        })
     }
 
-    fn stats(&self) -> ProcessBlockStats {
-        ProcessBlockStats {
+    fn stats(&self) -> Box<dyn Debug> {
+        Box::new(ProcessBlockStats {
             processed: self.processed,
             rejections: self.rejections,
             final_workload: self.devices.workload(),
@@ -166,7 +156,7 @@ impl Block for ProcessBlock {
                 .as_ref()
                 .map(|q| q.total_weighted_time() / self.processed as f32)
                 .unwrap_or(0.0),
-        }
+        })
     }
 
     fn process_in(&mut self, event_queue: &mut BinaryHeap<Event>, simulation_duration: Duration) {

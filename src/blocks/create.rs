@@ -1,11 +1,12 @@
 use crate::{
-    blocks::{Block, BlockId, BlockType, DistributionType},
+    blocks::{Block, BlockId},
     events::{Event, EventType},
-    routers::{Router, RouterType},
+    routers::Router,
 };
-use rand::{rng, Rng};
+use rand::{distr::Distribution, rng, Rng};
 use std::{
     collections::{BinaryHeap, HashMap},
+    fmt::Debug,
     time::Duration,
 };
 
@@ -15,34 +16,28 @@ pub struct CreateBlockBuilder<Distribution, Router> {
     distribution: Distribution,
 }
 
-impl<Router> CreateBlockBuilder<(), Router> {
-    pub fn distribution(
-        self,
-        distribution: impl Into<DistributionType>,
-    ) -> CreateBlockBuilder<DistributionType, Router> {
+impl<R> CreateBlockBuilder<(), R> {
+    pub fn distribution<D: Distribution<f32>>(self, distribution: D) -> CreateBlockBuilder<D, R> {
         CreateBlockBuilder {
             id: self.id,
             router: self.router,
-            distribution: distribution.into(),
+            distribution,
         }
     }
 }
 
-impl<Distribution> CreateBlockBuilder<Distribution, ()> {
-    pub fn router(
-        self,
-        router: impl Into<RouterType>,
-    ) -> CreateBlockBuilder<Distribution, RouterType> {
+impl<D> CreateBlockBuilder<D, ()> {
+    pub fn router<R: Router>(self, router: R) -> CreateBlockBuilder<D, R> {
         CreateBlockBuilder {
             id: self.id,
             distribution: self.distribution,
-            router: router.into(),
+            router,
         }
     }
 }
 
-impl CreateBlockBuilder<DistributionType, RouterType> {
-    pub fn build(self) -> CreateBlock {
+impl<D: Distribution<f32>, R: Router> CreateBlockBuilder<D, R> {
+    pub fn build(self) -> CreateBlock<D, R> {
         CreateBlock {
             id: self.id,
             created_events: 0,
@@ -52,20 +47,19 @@ impl CreateBlockBuilder<DistributionType, RouterType> {
     }
 }
 
-#[allow(unused)]
 #[derive(Debug)]
 pub struct CreateBlockStats {
     pub created_events: usize,
 }
 
-pub struct CreateBlock {
+pub struct CreateBlock<D: Distribution<f32>, R: Router> {
     pub id: BlockId,
     pub created_events: usize,
-    router: RouterType,
-    distribution: DistributionType,
+    router: R,
+    distribution: D,
 }
 
-impl CreateBlock {
+impl<D: Distribution<f32>, R: Router> CreateBlock<D, R> {
     pub fn builder(id: BlockId) -> CreateBlockBuilder<(), ()> {
         CreateBlockBuilder {
             id,
@@ -79,26 +73,23 @@ impl CreateBlock {
     }
 }
 
-impl Block for CreateBlock {
-    type StepStats = CreateBlockStats;
-    type Stats = CreateBlockStats;
-
+impl<D: Distribution<f32>, R: Router> Block for CreateBlock<D, R> {
     fn id(&self) -> BlockId {
         self.id
     }
 
-    fn next(&self, blocks: &HashMap<BlockId, BlockType>) -> Option<BlockId> {
+    fn next(&self, blocks: &HashMap<BlockId, Box<dyn Block>>) -> Option<BlockId> {
         self.router.next(blocks)
     }
 
-    fn step_stats(&self) -> Self::StepStats {
+    fn step_stats(&self) -> Box<dyn Debug> {
         self.stats()
     }
 
-    fn stats(&self) -> CreateBlockStats {
-        CreateBlockStats {
+    fn stats(&self) -> Box<dyn Debug> {
+        Box::new(CreateBlockStats {
             created_events: self.created_events,
-        }
+        })
     }
 
     fn init(&mut self, event_queue: &mut BinaryHeap<Event>) {

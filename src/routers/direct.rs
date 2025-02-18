@@ -1,5 +1,5 @@
 use crate::{
-    blocks::{BlockId, BlockType},
+    blocks::{Block, BlockId},
     routers::Router,
 };
 use std::collections::HashMap;
@@ -15,7 +15,7 @@ impl DirectRouter {
 }
 
 impl Router for DirectRouter {
-    fn next(&self, _blocks: &HashMap<BlockId, BlockType>) -> Option<BlockId> {
+    fn next(&self, _blocks: &HashMap<BlockId, Box<dyn Block>>) -> Option<BlockId> {
         Some(self.next)
     }
 }
