@@ -1,5 +1,5 @@
 use crate::{
-    blocks::{Block, BlockId, BlockType},
+    blocks::{Block, BlockId},
     events::{Event, EventType},
 };
 use std::{
@@ -10,9 +10,8 @@ use std::{
 pub struct QueueNetwork {
     event_queue: BinaryHeap<Event>,
     real_time: bool,
-    #[allow(clippy::type_complexity)]
     on_simulation_step: Box<dyn Fn(&QueueNetwork, Event)>,
-    pub blocks: HashMap<BlockId, BlockType>,
+    pub blocks: HashMap<BlockId, Box<dyn Block>>,
 }
 
 impl QueueNetwork {
@@ -25,19 +24,16 @@ impl QueueNetwork {
         }
     }
 
-    #[allow(unused)]
     pub fn real_time(mut self) -> Self {
         self.real_time = true;
         self
     }
 
-    pub fn add_block(mut self, block: impl Into<BlockType>) -> Self {
-        let block = block.into();
-        self.blocks.insert(block.id(), block);
+    pub fn add_block(mut self, block: impl Block + 'static) -> Self {
+        self.blocks.insert(block.id(), Box::new(block));
         self
     }
 
-    #[allow(unused)]
     pub fn on_simulation_step(
         mut self,
         on_simulation_step: impl Fn(&QueueNetwork, Event) + 'static,

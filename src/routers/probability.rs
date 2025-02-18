@@ -1,5 +1,5 @@
 use crate::{
-    blocks::{BlockId, BlockType},
+    blocks::{Block, BlockId},
     routers::Router,
 };
 use rand::{rng, Rng};
@@ -19,7 +19,7 @@ impl ProbabilityRouter {
 }
 
 impl Router for ProbabilityRouter {
-    fn next(&self, _blocks: &HashMap<BlockId, BlockType>) -> Option<BlockId> {
+    fn next(&self, _blocks: &HashMap<BlockId, Box<dyn Block>>) -> Option<BlockId> {
         let random = rng().random::<f32>();
 
         let mut sum = 0.0;
