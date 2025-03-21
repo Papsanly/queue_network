@@ -161,6 +161,10 @@ impl<D: Distribution<f32>, R: Router> Block for ProcessBlock<D, R> {
         })
     }
 
+    fn queue(&self) -> Option<&Queue> {
+        self.queue.as_ref()
+    }
+
     fn process_in(&mut self, event_queue: &mut BinaryHeap<Event>, simulation_duration: Duration) {
         if self.devices.idle != 0 {
             event_queue.push(Event(

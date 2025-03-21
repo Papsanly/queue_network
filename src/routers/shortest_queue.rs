@@ -1,5 +1,5 @@
 use crate::{
-    blocks::{BlockId, BlockType},
+    blocks::{Block, BlockId},
     routers::Router,
 };
 use std::collections::HashMap;
@@ -17,16 +17,11 @@ impl ShortestQueueRouter {
 }
 
 impl Router for ShortestQueueRouter {
-    fn next(&self, blocks: &HashMap<BlockId, BlockType>) -> Option<BlockId> {
+    fn next(&self, blocks: &HashMap<BlockId, Box<dyn Block>>) -> Option<BlockId> {
         blocks
             .iter()
             .filter(|(block_id, _)| self.routes.contains(block_id))
-            .min_by_key(|(_, block)| {
-                let BlockType::Process(block) = block else {
-                    panic!("ShortestQueueRouter only works with Process blocks");
-                };
-                block.queue.as_ref().map(|q| q.length).unwrap_or(0)
-            })
+            .min_by_key(|(_, block)| block.queue().map(|q| q.length).unwrap_or(0))
             .map(|(block_id, _)| *block_id)
     }
 }

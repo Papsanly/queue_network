@@ -6,7 +6,7 @@ mod queue;
 mod routers;
 
 use crate::{
-    blocks::{Block, CreateBlock, DisposeBlock, ProcessBlock},
+    blocks::{CreateBlock, DisposeBlock, ProcessBlock},
     events::Event,
     network::QueueNetwork,
     queue::Queue,
