@@ -70,7 +70,7 @@ impl<R> ProcessBlockBuilder<(), R> {
             router: self.router,
             queue: self.queue,
             devices: self.devices,
-            distribution: distribution.into(),
+            distribution,
         }
     }
 }
