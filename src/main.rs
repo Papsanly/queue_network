@@ -29,20 +29,30 @@ fn main() {
                 .router(ShortestQueueRouter::new(&["process1", "process2"]))
                 .build(),
         )
-        .add_block(
-            ProcessBlock::builder("process1")
+        .add_block({
+            let mut res = ProcessBlock::builder("process1")
                 .distribution(Normal::new(1.0, 0.3).unwrap())
                 .queue(shared_queue_pool.get("process1"))
                 .router(DirectRouter::new("dispose"))
-                .build(),
-        )
-        .add_block(
-            ProcessBlock::builder("process2")
+                .build();
+            res.devices.load(Duration::ZERO);
+            for _ in 0..2 {
+                res.queue.as_mut().unwrap().enqueue(Duration::ZERO);
+            }
+            res
+        })
+        .add_block({
+            let mut res = ProcessBlock::builder("process2")
                 .distribution(Normal::new(1.0, 0.3).unwrap())
                 .queue(shared_queue_pool.get("process2"))
                 .router(DirectRouter::new("dispose"))
-                .build(),
-        )
+                .build();
+            res.devices.load(Duration::ZERO);
+            for _ in 0..2 {
+                res.queue.as_mut().unwrap().enqueue(Duration::ZERO);
+            }
+            res
+        })
         .add_block(DisposeBlock::new("dispose"))
         .on_simulation_step(|network, Event(time, block_id, event_type)| {
             let block = network.blocks.get(block_id).unwrap();
