@@ -5,7 +5,7 @@ use crate::{
     queue::Queue,
     routers::Router,
     stats::{Stats, StepStats},
-    weighted_average::{weighted_average, weighted_total},
+    weighted_average::weighted_total,
 };
 use rand::{distr::Distribution, rng, Rng};
 use std::{
@@ -15,23 +15,21 @@ use std::{
 };
 
 #[derive(Debug)]
-pub struct ProcessBlockStepStats {
+pub struct ProcessBlockStepStats<D, Q> {
     pub processed: usize,
     pub rejections: usize,
-    pub workload: f32,
+    pub devices: D,
     pub rejection_probability: f32,
-    pub queue_length: usize,
+    pub queue: Q,
 }
 
 #[derive(Debug)]
-pub struct ProcessBlockStats {
+pub struct ProcessBlockStats<D, Q> {
     pub processed: usize,
     pub rejections: usize,
-    pub final_workload: f32,
-    pub average_workload: f32,
+    pub devices: D,
     pub rejection_probability: f32,
-    pub final_queue_length: usize,
-    pub average_queue_length: f32,
+    pub queue: Q,
     pub average_waited_time: f32,
 }
 
@@ -126,16 +124,14 @@ impl<D: Distribution<f32>, R: Router> Stats for ProcessBlock<D, R> {
         Box::new(ProcessBlockStats {
             processed: self.processed,
             rejections: self.rejections,
-            final_workload: self.devices.workload(),
-            average_workload: weighted_average(&self.devices.workloads),
+            devices: self.devices.stats(),
             rejection_probability: self.rejections as f32
                 / (self.rejections + self.processed) as f32,
-            final_queue_length: self.queue.as_ref().map(|q| q.length).unwrap_or(0),
-            average_queue_length: self
+            queue: self
                 .queue
                 .as_ref()
-                .map(|q| weighted_average(&q.lengths))
-                .unwrap_or(0.0),
+                .map(|q| q.stats())
+                .unwrap_or(Box::new(None::<()>)),
             average_waited_time: self
                 .queue
                 .as_ref()
@@ -150,10 +146,14 @@ impl<D: Distribution<f32>, R: Router> StepStats for ProcessBlock<D, R> {
         Box::new(ProcessBlockStepStats {
             processed: self.processed,
             rejections: self.rejections,
-            workload: self.devices.workload(),
+            devices: self.devices.step_stats(),
             rejection_probability: self.rejections as f32
                 / (self.rejections + self.processed) as f32,
-            queue_length: self.queue.as_ref().map(|q| q.length).unwrap_or(0),
+            queue: self
+                .queue
+                .as_ref()
+                .map(|q| q.step_stats())
+                .unwrap_or(Box::new(None::<()>)),
         })
     }
 }

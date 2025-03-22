@@ -1,9 +1,24 @@
-use std::time::Duration;
+use crate::{
+    stats::{Stats, StepStats},
+    weighted_average::weighted_average,
+};
+use std::{fmt::Debug, time::Duration};
 
 pub struct Devices {
     pub count: usize,
     pub idle: usize,
     pub workloads: Vec<(Duration, f32)>,
+}
+
+#[derive(Debug)]
+pub struct DevicesStats {
+    final_workload: f32,
+    average_workload: f32,
+}
+
+#[derive(Debug)]
+pub struct DevicesStepStats {
+    workload: f32,
 }
 
 impl Default for Devices {
@@ -35,5 +50,22 @@ impl Devices {
 
     pub fn workload(&self) -> f32 {
         (self.count - self.idle) as f32 / self.count as f32
+    }
+}
+
+impl Stats for Devices {
+    fn stats(&self) -> Box<dyn Debug> {
+        Box::new(DevicesStats {
+            final_workload: self.workload(),
+            average_workload: weighted_average(&self.workloads),
+        })
+    }
+}
+
+impl StepStats for Devices {
+    fn step_stats(&self) -> Box<dyn Debug> {
+        Box::new(DevicesStepStats {
+            workload: self.workload(),
+        })
     }
 }
