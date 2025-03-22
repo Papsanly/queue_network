@@ -115,7 +115,7 @@ impl ProcessBlock<(), ()> {
 
 impl<D: Distribution<f32>, R: Router> ProcessBlock<D, R> {
     fn delay(&self) -> Duration {
-        Duration::from_secs_f32(rng().sample(&self.distribution))
+        Duration::from_secs_f32(rng().sample(&self.distribution).max(0.0))
     }
 }
 
