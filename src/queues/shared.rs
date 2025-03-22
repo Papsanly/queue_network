@@ -84,11 +84,27 @@ pub struct SharedQueue {
 #[derive(Debug)]
 struct SharedQueueStats {
     transitions: usize,
+    base: Box<dyn Debug>,
+}
+
+#[derive(Debug)]
+struct SharedQueueStepStats {
+    transitions: usize,
+    base: Box<dyn Debug>,
 }
 
 impl StepStats for SharedQueue {
     fn step_stats(&self) -> Box<dyn Debug> {
-        self.stats()
+        Box::new(SharedQueueStats {
+            transitions: self.transitions,
+            base: self
+                .pool
+                .queues
+                .borrow()
+                .get(self.block)
+                .expect("queue should exist in shared queue pool")
+                .step_stats(),
+        })
     }
 }
 
@@ -96,6 +112,13 @@ impl Stats for SharedQueue {
     fn stats(&self) -> Box<dyn Debug> {
         Box::new(SharedQueueStats {
             transitions: self.transitions,
+            base: self
+                .pool
+                .queues
+                .borrow()
+                .get(self.block)
+                .expect("queue should exist in shared queue pool")
+                .stats(),
         })
     }
 }
