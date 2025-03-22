@@ -40,12 +40,13 @@ impl Queue for RegularQueue {
     fn total_weighted_time(&self) -> f32 {
         let mut total = 0.0;
         let mut iter = self.lengths.iter();
-        let Some((mut current_time, _)) = iter.next() else {
+        let Some((mut current_time, mut length)) = iter.next() else {
             return 0.0;
         };
-        for &(time, length) in iter {
+        for &(time, new_length) in iter {
             total += (time - current_time).as_secs_f32() * length as f32;
             current_time = time;
+            length = new_length;
         }
         total
     }
