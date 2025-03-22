@@ -24,5 +24,9 @@ pub fn duration<T>(iter: &[(Duration, T)]) -> Duration {
 }
 
 pub fn weighted_average<T: Copy + ToPrimitive>(iter: &[(Duration, T)]) -> f32 {
-    weighted_total(iter) / duration(iter).as_secs_f32()
+    let res = weighted_total(iter) / duration(iter).as_secs_f32();
+    if res.is_nan() {
+        return iter.last().unwrap().1.to_f32().unwrap_or(0.0);
+    }
+    res
 }
