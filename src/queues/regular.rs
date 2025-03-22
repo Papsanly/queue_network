@@ -1,6 +1,7 @@
 use crate::{
+    queues::Queue,
     stats::{Stats, StepStats},
-    weighted_average::weighted_average,
+    weighted_average::{weighted_average, weighted_total},
 };
 use std::{fmt::Debug, time::Duration};
 
@@ -37,6 +38,10 @@ impl Queue for RegularQueue {
         self.length
     }
 
+    fn weighted_total(&self) -> f32 {
+        weighted_total(&self.lengths)
+    }
+
     fn capacity(&self) -> Option<usize> {
         self.capacity
     }
@@ -52,7 +57,7 @@ impl Queue for RegularQueue {
     }
 }
 
-impl Stats for Queue {
+impl Stats for RegularQueue {
     fn stats(&self) -> Box<dyn Debug> {
         Box::new(QueueStats {
             final_length: self.length,
@@ -61,7 +66,7 @@ impl Stats for Queue {
     }
 }
 
-impl StepStats for Queue {
+impl StepStats for RegularQueue {
     fn step_stats(&self) -> Box<dyn Debug> {
         Box::new(QueueStepStats {
             length: self.length,

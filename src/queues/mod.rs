@@ -1,16 +1,15 @@
 mod regular;
 mod shared;
 
+use crate::stats::{Stats, StepStats};
 pub use regular::RegularQueue;
 pub use shared::SharedQueuePool;
 use std::time::Duration;
 
-pub trait Queue {
+pub trait Queue: StepStats + Stats {
     fn length(&self) -> usize;
+    fn weighted_total(&self) -> f32;
     fn capacity(&self) -> Option<usize>;
     fn enqueue(&mut self, simulation_duration: Duration);
     fn dequeue(&mut self, simulation_duration: Duration);
-    fn total_weighted_time(&self) -> f32;
-    fn duration(&self) -> Duration;
-    fn average_length(&self) -> f32;
 }

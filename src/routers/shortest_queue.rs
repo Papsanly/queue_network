@@ -18,10 +18,16 @@ impl ShortestQueueRouter {
 
 impl Router for ShortestQueueRouter {
     fn next(&self, blocks: &HashMap<BlockId, Box<dyn Block>>) -> Option<BlockId> {
-        blocks
+        self.routes
             .iter()
-            .filter(|(block_id, _)| self.routes.contains(block_id))
-            .min_by_key(|(_, block)| block.queue().map(|q| q.length()).unwrap_or(0))
-            .map(|(block_id, _)| *block_id)
+            .min_by_key(|&block_id| {
+                blocks
+                    .get(block_id)
+                    .expect("block id in shortest queue router should exist in blocks")
+                    .queue()
+                    .expect("block in shortest queue router should have a queue")
+                    .length()
+            })
+            .cloned()
     }
 }

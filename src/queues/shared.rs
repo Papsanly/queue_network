@@ -1,5 +1,9 @@
-use crate::{blocks::BlockId, queues::Queue};
-use std::{cell::RefCell, collections::HashMap, rc::Rc, time::Duration};
+use crate::{
+    blocks::BlockId,
+    queues::Queue,
+    stats::{Stats, StepStats},
+};
+use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc, time::Duration};
 
 pub struct SharedQueuePool {
     queues: Rc<RefCell<HashMap<BlockId, Box<dyn Queue>>>>,
@@ -25,18 +29,18 @@ impl SharedQueuePool {
         self
     }
 
-    fn redistribute(&mut self, simulation_duration: Duration) {
+    fn redistribute(&mut self, simulation_duration: Duration) -> bool {
         let queues = self.queues.borrow();
         let Some((_, max_length_queue)) = queues.iter().max_by_key(|(_, q)| q.length()) else {
-            return;
+            return false;
         };
 
         let Some((_, min_length_queue)) = queues.iter().min_by_key(|(_, q)| q.length()) else {
-            return;
+            return false;
         };
 
         if max_length_queue.length() - min_length_queue.length() < 2 {
-            return;
+            return false;
         }
 
         drop(queues);
@@ -58,12 +62,15 @@ impl SharedQueuePool {
         {
             min_length_queue.enqueue(simulation_duration);
         };
+
+        true
     }
 
     pub fn get(&self, block: BlockId) -> SharedQueue {
         SharedQueue {
             block,
             pool: self.clone(),
+            transitions: 0,
         }
     }
 }
@@ -71,6 +78,26 @@ impl SharedQueuePool {
 pub struct SharedQueue {
     block: BlockId,
     pool: SharedQueuePool,
+    transitions: usize,
+}
+
+#[derive(Debug)]
+struct SharedQueueStats {
+    transitions: usize,
+}
+
+impl StepStats for SharedQueue {
+    fn step_stats(&self) -> Box<dyn Debug> {
+        self.stats()
+    }
+}
+
+impl Stats for SharedQueue {
+    fn stats(&self) -> Box<dyn Debug> {
+        Box::new(SharedQueueStats {
+            transitions: self.transitions,
+        })
+    }
 }
 
 impl Queue for SharedQueue {
@@ -81,6 +108,15 @@ impl Queue for SharedQueue {
             .get(self.block)
             .expect("queue should exist in shared queue pool")
             .length()
+    }
+
+    fn weighted_total(&self) -> f32 {
+        self.pool
+            .queues
+            .borrow()
+            .get(self.block)
+            .expect("queue should exist in shared queue pool")
+            .weighted_total()
     }
 
     fn capacity(&self) -> Option<usize> {
@@ -99,7 +135,9 @@ impl Queue for SharedQueue {
             .get_mut(self.block)
             .expect("queue should exist in shared queue pool")
             .enqueue(simulation_duration);
-        self.pool.redistribute(simulation_duration);
+        if self.pool.redistribute(simulation_duration) {
+            self.transitions += 1;
+        }
     }
 
     fn dequeue(&mut self, simulation_duration: Duration) {
@@ -109,33 +147,8 @@ impl Queue for SharedQueue {
             .get_mut(self.block)
             .expect("queue should exist in shared queue pool")
             .dequeue(simulation_duration);
-        self.pool.redistribute(simulation_duration);
-    }
-
-    fn total_weighted_time(&self) -> f32 {
-        self.pool
-            .queues
-            .borrow_mut()
-            .get_mut(self.block)
-            .expect("queue should exist in shared queue pool")
-            .total_weighted_time()
-    }
-
-    fn duration(&self) -> Duration {
-        self.pool
-            .queues
-            .borrow_mut()
-            .get_mut(self.block)
-            .expect("queue should exist in shared queue pool")
-            .duration()
-    }
-
-    fn average_length(&self) -> f32 {
-        self.pool
-            .queues
-            .borrow_mut()
-            .get_mut(self.block)
-            .expect("queue should exist in shared queue pool")
-            .average_length()
+        if self.pool.redistribute(simulation_duration) {
+            self.transitions += 1;
+        }
     }
 }

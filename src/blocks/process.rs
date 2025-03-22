@@ -5,7 +5,6 @@ use crate::{
     queues::Queue,
     routers::Router,
     stats::{Stats, StepStats},
-    weighted_average::weighted_total,
 };
 use rand::{distr::Distribution, rng, Rng};
 use std::{
@@ -135,7 +134,7 @@ impl<D: Distribution<f32>, R: Router> Stats for ProcessBlock<D, R> {
             average_waited_time: self
                 .queue
                 .as_ref()
-                .map(|q| weighted_total(&q.lengths) / self.processed as f32)
+                .map(|q| q.weighted_total() / self.processed as f32)
                 .unwrap_or(0.0),
         })
     }
