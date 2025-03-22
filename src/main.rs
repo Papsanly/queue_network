@@ -27,6 +27,7 @@ fn main() {
             CreateBlock::builder("create")
                 .distribution(Exp::new(1.0 / 0.5).unwrap())
                 .router(ShortestQueueRouter::new(&["process1", "process2"]))
+                .first_at(Duration::from_secs_f32(0.1))
                 .build(),
         )
         .add_block({
