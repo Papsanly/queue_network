@@ -4,6 +4,8 @@ mod events;
 mod network;
 mod queues;
 mod routers;
+mod stats;
+mod weighted_average;
 
 use crate::{
     blocks::{CreateBlock, DisposeBlock, ProcessBlock},

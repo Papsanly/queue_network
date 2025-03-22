@@ -1,9 +1,24 @@
-use std::time::Duration;
+use crate::{
+    stats::{Stats, StepStats},
+    weighted_average::weighted_average,
+};
+use std::{fmt::Debug, time::Duration};
 
 pub struct Devices {
     pub count: usize,
     pub idle: usize,
     pub workloads: Vec<(Duration, f32)>,
+}
+
+#[derive(Debug)]
+pub struct DevicesStats {
+    final_workload: f32,
+    average_workload: f32,
+}
+
+#[derive(Debug)]
+pub struct DevicesStepStats {
+    workload: f32,
 }
 
 impl Default for Devices {
@@ -36,29 +51,21 @@ impl Devices {
     pub fn workload(&self) -> f32 {
         (self.count - self.idle) as f32 / self.count as f32
     }
+}
 
-    pub fn total_weighted_workload(&self) -> f32 {
-        let mut total = 0.0;
-        let mut iter = self.workloads.iter();
-        let Some((mut current_time, mut workload)) = iter.next() else {
-            return 0.0;
-        };
-        for &(time, new_workload) in iter {
-            total += (time - current_time).as_secs_f32() * workload;
-            current_time = time;
-            workload = new_workload
-        }
-        total
+impl Stats for Devices {
+    fn stats(&self) -> Box<dyn Debug> {
+        Box::new(DevicesStats {
+            final_workload: self.workload(),
+            average_workload: weighted_average(&self.workloads),
+        })
     }
+}
 
-    pub fn duration(&self) -> Duration {
-        let Some(&last) = self.workloads.last().map(|(time, _)| time) else {
-            return Duration::from_secs(0);
-        };
-        last
-    }
-
-    pub fn average_workload(&self) -> f32 {
-        self.total_weighted_workload() / self.duration().as_secs_f32()
+impl StepStats for Devices {
+    fn step_stats(&self) -> Box<dyn Debug> {
+        Box::new(DevicesStepStats {
+            workload: self.workload(),
+        })
     }
 }

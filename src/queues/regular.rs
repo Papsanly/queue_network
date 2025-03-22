@@ -1,11 +1,25 @@
-use crate::queues::Queue;
-use std::time::Duration;
+use crate::{
+    stats::{Stats, StepStats},
+    weighted_average::weighted_average,
+};
+use std::{fmt::Debug, time::Duration};
 
 #[derive(Default)]
 pub struct RegularQueue {
     pub length: usize,
     pub capacity: Option<usize>,
-    lengths: Vec<(Duration, usize)>,
+    pub lengths: Vec<(Duration, usize)>,
+}
+
+#[derive(Debug)]
+pub struct QueueStats {
+    final_length: usize,
+    average_length: f32,
+}
+
+#[derive(Debug)]
+pub struct QueueStepStats {
+    length: usize,
 }
 
 impl RegularQueue {
@@ -36,29 +50,21 @@ impl Queue for RegularQueue {
         self.length -= 1;
         self.lengths.push((simulation_duration, self.length));
     }
+}
 
-    fn total_weighted_time(&self) -> f32 {
-        let mut total = 0.0;
-        let mut iter = self.lengths.iter();
-        let Some((mut current_time, mut length)) = iter.next() else {
-            return 0.0;
-        };
-        for &(time, new_length) in iter {
-            total += (time - current_time).as_secs_f32() * length as f32;
-            current_time = time;
-            length = new_length;
-        }
-        total
+impl Stats for Queue {
+    fn stats(&self) -> Box<dyn Debug> {
+        Box::new(QueueStats {
+            final_length: self.length,
+            average_length: weighted_average(&self.lengths),
+        })
     }
+}
 
-    fn duration(&self) -> Duration {
-        let Some(&last) = self.lengths.last().map(|(time, _)| time) else {
-            return Duration::from_secs(0);
-        };
-        last
-    }
-
-    fn average_length(&self) -> f32 {
-        self.total_weighted_time() / self.duration().as_secs_f32()
+impl StepStats for Queue {
+    fn step_stats(&self) -> Box<dyn Debug> {
+        Box::new(QueueStepStats {
+            length: self.length,
+        })
     }
 }

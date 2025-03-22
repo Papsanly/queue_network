@@ -1,6 +1,7 @@
 use crate::{
     blocks::{Block, BlockId},
     events::Event,
+    stats::{Stats, StepStats},
 };
 use std::{
     collections::{BinaryHeap, HashMap},
@@ -27,6 +28,20 @@ impl DisposeBlock {
     }
 }
 
+impl Stats for DisposeBlock {
+    fn stats(&self) -> Box<dyn Debug> {
+        Box::new(DisposeBlockStats {
+            disposed_events: self.disposed_events,
+        })
+    }
+}
+
+impl StepStats for DisposeBlock {
+    fn step_stats(&self) -> Box<dyn Debug> {
+        self.stats()
+    }
+}
+
 impl Block for DisposeBlock {
     fn id(&self) -> BlockId {
         self.id
@@ -34,16 +49,6 @@ impl Block for DisposeBlock {
 
     fn next(&self, _blocks: &HashMap<BlockId, Box<dyn Block>>) -> Option<BlockId> {
         None
-    }
-
-    fn step_stats(&self) -> Box<dyn Debug> {
-        self.stats()
-    }
-
-    fn stats(&self) -> Box<dyn Debug> {
-        Box::new(DisposeBlockStats {
-            disposed_events: self.disposed_events,
-        })
     }
 
     fn process_in(&mut self, _event_queue: &mut BinaryHeap<Event>, _simulation_duration: Duration) {

@@ -4,6 +4,8 @@ use crate::{
     events::{Event, EventType},
     queues::Queue,
     routers::Router,
+    stats::{Stats, StepStats},
+    weighted_average::weighted_total,
 };
 use rand::{distr::Distribution, rng, Rng};
 use std::{
@@ -13,23 +15,21 @@ use std::{
 };
 
 #[derive(Debug)]
-pub struct ProcessBlockStepStats {
+pub struct ProcessBlockStepStats<D, Q> {
     pub processed: usize,
     pub rejections: usize,
-    pub workload: f32,
+    pub devices: D,
     pub rejection_probability: f32,
-    pub queue_length: usize,
+    pub queue: Q,
 }
 
 #[derive(Debug)]
-pub struct ProcessBlockStats {
+pub struct ProcessBlockStats<D, Q> {
     pub processed: usize,
     pub rejections: usize,
-    pub final_workload: f32,
-    pub average_workload: f32,
+    pub devices: D,
     pub rejection_probability: f32,
-    pub final_queue_length: usize,
-    pub average_queue_length: f32,
+    pub queue: Q,
     pub average_waited_time: f32,
 }
 
@@ -119,6 +119,45 @@ impl<D: Distribution<f32>, R: Router> ProcessBlock<D, R> {
     }
 }
 
+impl<D: Distribution<f32>, R: Router> Stats for ProcessBlock<D, R> {
+    fn stats(&self) -> Box<dyn Debug> {
+        Box::new(ProcessBlockStats {
+            processed: self.processed,
+            rejections: self.rejections,
+            devices: self.devices.stats(),
+            rejection_probability: self.rejections as f32
+                / (self.rejections + self.processed) as f32,
+            queue: self
+                .queue
+                .as_ref()
+                .map(|q| q.stats())
+                .unwrap_or(Box::new(None::<()>)),
+            average_waited_time: self
+                .queue
+                .as_ref()
+                .map(|q| weighted_total(&q.lengths) / self.processed as f32)
+                .unwrap_or(0.0),
+        })
+    }
+}
+
+impl<D: Distribution<f32>, R: Router> StepStats for ProcessBlock<D, R> {
+    fn step_stats(&self) -> Box<dyn Debug> {
+        Box::new(ProcessBlockStepStats {
+            processed: self.processed,
+            rejections: self.rejections,
+            devices: self.devices.step_stats(),
+            rejection_probability: self.rejections as f32
+                / (self.rejections + self.processed) as f32,
+            queue: self
+                .queue
+                .as_ref()
+                .map(|q| q.step_stats())
+                .unwrap_or(Box::new(None::<()>)),
+        })
+    }
+}
+
 impl<D: Distribution<f32>, R: Router> Block for ProcessBlock<D, R> {
     fn id(&self) -> BlockId {
         self.id
@@ -126,39 +165,6 @@ impl<D: Distribution<f32>, R: Router> Block for ProcessBlock<D, R> {
 
     fn next(&self, blocks: &HashMap<BlockId, Box<dyn Block>>) -> Option<BlockId> {
         self.router.next(blocks)
-    }
-
-    fn step_stats(&self) -> Box<dyn Debug> {
-        Box::new(ProcessBlockStepStats {
-            processed: self.processed,
-            rejections: self.rejections,
-            workload: self.devices.workload(),
-            rejection_probability: self.rejections as f32
-                / (self.rejections + self.processed) as f32,
-            queue_length: self.queue.as_ref().map(|q| q.length()).unwrap_or(0),
-        })
-    }
-
-    fn stats(&self) -> Box<dyn Debug> {
-        Box::new(ProcessBlockStats {
-            processed: self.processed,
-            rejections: self.rejections,
-            final_workload: self.devices.workload(),
-            average_workload: self.devices.average_workload(),
-            rejection_probability: self.rejections as f32
-                / (self.rejections + self.processed) as f32,
-            final_queue_length: self.queue.as_ref().map(|q| q.length()).unwrap_or(0),
-            average_queue_length: self
-                .queue
-                .as_ref()
-                .map(|q| q.average_length())
-                .unwrap_or(0.0),
-            average_waited_time: self
-                .queue
-                .as_ref()
-                .map(|q| q.total_weighted_time() / self.processed as f32)
-                .unwrap_or(0.0),
-        })
     }
 
     fn queue(&self) -> Option<&dyn Queue> {
