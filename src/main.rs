@@ -14,7 +14,7 @@ use crate::{
     queues::{RegularQueue, SharedQueuePool},
     routers::{DirectRouter, ShortestQueueRouter},
 };
-use rand_distr::Exp;
+use rand_distr::{Exp, Normal};
 use std::time::Duration;
 
 fn main() {
@@ -31,14 +31,14 @@ fn main() {
         )
         .add_block(
             ProcessBlock::builder("process1")
-                .distribution(Exp::new(1.0 / 0.3).unwrap())
+                .distribution(Normal::new(1.0, 0.3).unwrap())
                 .queue(shared_queue_pool.get("process1"))
                 .router(DirectRouter::new("dispose"))
                 .build(),
         )
         .add_block(
             ProcessBlock::builder("process2")
-                .distribution(Exp::new(1.0 / 0.3).unwrap())
+                .distribution(Normal::new(1.0, 0.3).unwrap())
                 .queue(shared_queue_pool.get("process2"))
                 .router(DirectRouter::new("dispose"))
                 .build(),
