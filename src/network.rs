@@ -4,6 +4,7 @@ use crate::{
 };
 use std::{
     collections::{BinaryHeap, HashMap},
+    io::stdin,
     thread,
     time::Duration,
 };
@@ -11,6 +12,7 @@ use std::{
 pub struct QueueNetwork {
     event_queue: BinaryHeap<Event>,
     speed: Option<f32>,
+    step_through: bool,
     on_simulation_step: Box<dyn Fn(&QueueNetwork, Event)>,
     pub blocks: HashMap<BlockId, Box<dyn Block>>,
 }
@@ -20,6 +22,7 @@ impl QueueNetwork {
         QueueNetwork {
             event_queue: BinaryHeap::new(),
             speed: None,
+            step_through: false,
             on_simulation_step: Box::new(|_, _| {}),
             blocks: HashMap::new(),
         }
@@ -32,6 +35,11 @@ impl QueueNetwork {
 
     pub fn speed(mut self, speed: f32) -> Self {
         self.speed = Some(speed);
+        self
+    }
+
+    pub fn step_through(mut self) -> Self {
+        self.step_through = true;
         self
     }
 
@@ -55,7 +63,9 @@ impl QueueNetwork {
 
         let mut prev_time = Duration::from_secs(0);
         while let Some(Event(time, block_id, event_type)) = self.event_queue.pop() {
-            if let Some(speed) = self.speed {
+            if self.step_through {
+                stdin().read_line(&mut String::new()).unwrap();
+            } else if let Some(speed) = self.speed {
                 thread::sleep(Duration::from_secs_f32(
                     (time - prev_time).as_secs_f32() / speed,
                 ));
