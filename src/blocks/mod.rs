@@ -6,7 +6,7 @@ pub use create::CreateBlock;
 pub use dispose::DisposeBlock;
 pub use process::ProcessBlock;
 
-use crate::{events::Event, queue::Queue};
+use crate::{events::Event, queues::Queue};
 use std::{
     collections::{BinaryHeap, HashMap},
     fmt::Debug,
@@ -20,7 +20,7 @@ pub trait Block {
     fn next(&self, blocks: &HashMap<BlockId, Box<dyn Block>>) -> Option<BlockId>;
     fn step_stats(&self) -> Box<dyn Debug>;
     fn stats(&self) -> Box<dyn Debug>;
-    fn queue(&self) -> Option<&Queue> {
+    fn queue(&self) -> Option<&dyn Queue> {
         None
     }
     fn init(&mut self, _event_queue: &mut BinaryHeap<Event>) {}

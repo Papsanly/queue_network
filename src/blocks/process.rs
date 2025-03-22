@@ -2,7 +2,7 @@ use crate::{
     blocks::{Block, BlockId},
     devices::Devices,
     events::{Event, EventType},
-    queue::Queue,
+    queues::Queue,
     routers::Router,
 };
 use rand::{distr::Distribution, rng, Rng};
@@ -35,7 +35,7 @@ pub struct ProcessBlockStats {
 
 pub struct ProcessBlock<D, R> {
     pub id: BlockId,
-    pub queue: Option<Queue>,
+    pub queue: Option<Box<dyn Queue>>,
     pub devices: Devices,
     pub processed: usize,
     pub rejections: usize,
@@ -48,7 +48,7 @@ pub struct ProcessBlockBuilder<Distribution, Router> {
     router: Router,
     distribution: Distribution,
     devices: Devices,
-    queue: Option<Queue>,
+    queue: Option<Box<dyn Queue>>,
 }
 
 impl<D> ProcessBlockBuilder<D, ()> {
@@ -76,8 +76,8 @@ impl<R> ProcessBlockBuilder<(), R> {
 }
 
 impl<Distribution, Router> ProcessBlockBuilder<Distribution, Router> {
-    pub fn queue(mut self, queue: impl Into<Queue>) -> Self {
-        self.queue = Some(queue.into());
+    pub fn queue(mut self, queue: impl Queue + 'static) -> Self {
+        self.queue = Some(Box::new(queue));
         self
     }
 
@@ -135,7 +135,7 @@ impl<D: Distribution<f32>, R: Router> Block for ProcessBlock<D, R> {
             workload: self.devices.workload(),
             rejection_probability: self.rejections as f32
                 / (self.rejections + self.processed) as f32,
-            queue_length: self.queue.as_ref().map(|q| q.length).unwrap_or(0),
+            queue_length: self.queue.as_ref().map(|q| q.length()).unwrap_or(0),
         })
     }
 
@@ -147,7 +147,7 @@ impl<D: Distribution<f32>, R: Router> Block for ProcessBlock<D, R> {
             average_workload: self.devices.average_workload(),
             rejection_probability: self.rejections as f32
                 / (self.rejections + self.processed) as f32,
-            final_queue_length: self.queue.as_ref().map(|q| q.length).unwrap_or(0),
+            final_queue_length: self.queue.as_ref().map(|q| q.length()).unwrap_or(0),
             average_queue_length: self
                 .queue
                 .as_ref()
@@ -161,8 +161,8 @@ impl<D: Distribution<f32>, R: Router> Block for ProcessBlock<D, R> {
         })
     }
 
-    fn queue(&self) -> Option<&Queue> {
-        self.queue.as_ref()
+    fn queue(&self) -> Option<&dyn Queue> {
+        self.queue.as_deref()
     }
 
     fn process_in(&mut self, event_queue: &mut BinaryHeap<Event>, simulation_duration: Duration) {
@@ -178,7 +178,7 @@ impl<D: Distribution<f32>, R: Router> Block for ProcessBlock<D, R> {
                 self.rejections += 1;
                 return;
             };
-            if queue.length < queue.capacity.unwrap_or(usize::MAX) {
+            if queue.length() < queue.capacity().unwrap_or(usize::MAX) {
                 queue.enqueue(simulation_duration);
             } else {
                 self.rejections += 1;
@@ -193,7 +193,7 @@ impl<D: Distribution<f32>, R: Router> Block for ProcessBlock<D, R> {
             self.devices.unload(simulation_duration);
             return;
         };
-        if queue.length == 0 {
+        if queue.length() == 0 {
             self.devices.unload(simulation_duration);
         } else {
             queue.dequeue(simulation_duration);

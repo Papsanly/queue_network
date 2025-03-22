@@ -2,20 +2,24 @@ mod blocks;
 mod devices;
 mod events;
 mod network;
-mod queue;
+mod queues;
 mod routers;
 
 use crate::{
     blocks::{CreateBlock, DisposeBlock, ProcessBlock},
     events::Event,
     network::QueueNetwork,
-    queue::Queue,
+    queues::{RegularQueue, SharedQueuePool},
     routers::{DirectRouter, ShortestQueueRouter},
 };
 use rand_distr::Exp;
 use std::time::Duration;
 
 fn main() {
+    let shared_queue_pool = SharedQueuePool::new()
+        .add_queue("process1", RegularQueue::from_capacity(3))
+        .add_queue("process2", RegularQueue::from_capacity(3));
+
     let mut network = QueueNetwork::new()
         .add_block(
             CreateBlock::builder("create")
@@ -26,14 +30,14 @@ fn main() {
         .add_block(
             ProcessBlock::builder("process1")
                 .distribution(Exp::new(1.0 / 0.3).unwrap())
-                .queue(Queue::from_capacity(3))
+                .queue(shared_queue_pool.get("process1"))
                 .router(DirectRouter::new("dispose"))
                 .build(),
         )
         .add_block(
             ProcessBlock::builder("process2")
                 .distribution(Exp::new(1.0 / 0.3).unwrap())
-                .queue(Queue::from_capacity(3))
+                .queue(shared_queue_pool.get("process2"))
                 .router(DirectRouter::new("dispose"))
                 .build(),
         )

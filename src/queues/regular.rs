@@ -1,13 +1,14 @@
+use crate::queues::Queue;
 use std::time::Duration;
 
 #[derive(Default)]
-pub struct Queue {
+pub struct RegularQueue {
     pub length: usize,
     pub capacity: Option<usize>,
     lengths: Vec<(Duration, usize)>,
 }
 
-impl Queue {
+impl RegularQueue {
     pub fn from_capacity(capacity: usize) -> Self {
         Self {
             length: 0,
@@ -15,18 +16,28 @@ impl Queue {
             lengths: Vec::new(),
         }
     }
+}
 
-    pub fn enqueue(&mut self, simulation_duration: Duration) {
+impl Queue for RegularQueue {
+    fn length(&self) -> usize {
+        self.length
+    }
+
+    fn capacity(&self) -> Option<usize> {
+        self.capacity
+    }
+
+    fn enqueue(&mut self, simulation_duration: Duration) {
         self.length += 1;
         self.lengths.push((simulation_duration, self.length));
     }
 
-    pub fn dequeue(&mut self, simulation_duration: Duration) {
+    fn dequeue(&mut self, simulation_duration: Duration) {
         self.length -= 1;
         self.lengths.push((simulation_duration, self.length));
     }
 
-    pub fn total_weighted_time(&self) -> f32 {
+    fn total_weighted_time(&self) -> f32 {
         let mut total = 0.0;
         let mut iter = self.lengths.iter();
         let Some((mut current_time, _)) = iter.next() else {
@@ -39,14 +50,14 @@ impl Queue {
         total
     }
 
-    pub fn duration(&self) -> Duration {
+    fn duration(&self) -> Duration {
         let Some(&last) = self.lengths.last().map(|(time, _)| time) else {
             return Duration::from_secs(0);
         };
         last
     }
 
-    pub fn average_length(&self) -> f32 {
+    fn average_length(&self) -> f32 {
         self.total_weighted_time() / self.duration().as_secs_f32()
     }
 }

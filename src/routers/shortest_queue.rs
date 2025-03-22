@@ -21,7 +21,7 @@ impl Router for ShortestQueueRouter {
         blocks
             .iter()
             .filter(|(block_id, _)| self.routes.contains(block_id))
-            .min_by_key(|(_, block)| block.queue().map(|q| q.length).unwrap_or(0))
+            .min_by_key(|(_, block)| block.queue().map(|q| q.length()).unwrap_or(0))
             .map(|(block_id, _)| *block_id)
     }
 }
