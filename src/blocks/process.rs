@@ -5,6 +5,7 @@ use crate::{
     queue::Queue,
     routers::Router,
     stats::{Stats, StepStats},
+    weighted_average::{weighted_average, weighted_total},
 };
 use rand::{distr::Distribution, rng, Rng};
 use std::{
@@ -126,19 +127,19 @@ impl<D: Distribution<f32>, R: Router> Stats for ProcessBlock<D, R> {
             processed: self.processed,
             rejections: self.rejections,
             final_workload: self.devices.workload(),
-            average_workload: self.devices.average_workload(),
+            average_workload: weighted_average(&self.devices.workloads),
             rejection_probability: self.rejections as f32
                 / (self.rejections + self.processed) as f32,
             final_queue_length: self.queue.as_ref().map(|q| q.length).unwrap_or(0),
             average_queue_length: self
                 .queue
                 .as_ref()
-                .map(|q| q.average_length())
+                .map(|q| weighted_average(&q.lengths))
                 .unwrap_or(0.0),
             average_waited_time: self
                 .queue
                 .as_ref()
-                .map(|q| q.total_weighted_time() / self.processed as f32)
+                .map(|q| weighted_total(&q.lengths) / self.processed as f32)
                 .unwrap_or(0.0),
         })
     }
