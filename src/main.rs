@@ -69,7 +69,7 @@ fn main() {
 
     network.simulate(Duration::from_secs(1000));
 
-    println!("\nFinal Simulation State:");
+    println!("\n==== Final Simulation State ====\n");
     let mut blocks = network.blocks.values().collect::<Vec<_>>();
     blocks.sort_by_key(|block| match block.id() {
         "create" => "0".to_string(),
