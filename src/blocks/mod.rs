@@ -6,20 +6,20 @@ pub use create::CreateBlock;
 pub use dispose::DisposeBlock;
 pub use process::ProcessBlock;
 
-use crate::events::Event;
+use crate::{
+    events::Event,
+    stats::{Stats, StepStats},
+};
 use std::{
     collections::{BinaryHeap, HashMap},
-    fmt::Debug,
     time::Duration,
 };
 
 pub type BlockId = &'static str;
 
-pub trait Block {
+pub trait Block: Stats + StepStats {
     fn id(&self) -> BlockId;
     fn next(&self, blocks: &HashMap<BlockId, Box<dyn Block>>) -> Option<BlockId>;
-    fn step_stats(&self) -> Box<dyn Debug>;
-    fn stats(&self) -> Box<dyn Debug>;
     fn init(&mut self, _event_queue: &mut BinaryHeap<Event>) {}
     fn process_in(&mut self, _event_queue: &mut BinaryHeap<Event>, _simulation_duration: Duration) {
     }

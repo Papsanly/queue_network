@@ -4,6 +4,7 @@ mod events;
 mod network;
 mod queue;
 mod routers;
+mod stats;
 
 use crate::{
     blocks::{CreateBlock, DisposeBlock, ProcessBlock},

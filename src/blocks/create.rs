@@ -2,6 +2,7 @@ use crate::{
     blocks::{Block, BlockId},
     events::{Event, EventType},
     routers::Router,
+    stats::{Stats, StepStats},
 };
 use rand::{distr::Distribution, rng, Rng};
 use std::{
@@ -75,6 +76,20 @@ impl<D: Distribution<f32>, R: Router> CreateBlock<D, R> {
     }
 }
 
+impl<D: Distribution<f32>, R: Router> Stats for CreateBlock<D, R> {
+    fn stats(&self) -> Box<dyn Debug> {
+        Box::new(CreateBlockStats {
+            created_events: self.created_events,
+        })
+    }
+}
+
+impl<D: Distribution<f32>, R: Router> StepStats for CreateBlock<D, R> {
+    fn step_stats(&self) -> Box<dyn Debug> {
+        self.stats()
+    }
+}
+
 impl<D: Distribution<f32>, R: Router> Block for CreateBlock<D, R> {
     fn id(&self) -> BlockId {
         self.id
@@ -82,16 +97,6 @@ impl<D: Distribution<f32>, R: Router> Block for CreateBlock<D, R> {
 
     fn next(&self, blocks: &HashMap<BlockId, Box<dyn Block>>) -> Option<BlockId> {
         self.router.next(blocks)
-    }
-
-    fn step_stats(&self) -> Box<dyn Debug> {
-        self.stats()
-    }
-
-    fn stats(&self) -> Box<dyn Debug> {
-        Box::new(CreateBlockStats {
-            created_events: self.created_events,
-        })
     }
 
     fn init(&mut self, event_queue: &mut BinaryHeap<Event>) {

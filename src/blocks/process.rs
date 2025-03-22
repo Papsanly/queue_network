@@ -4,6 +4,7 @@ use crate::{
     events::{Event, EventType},
     queue::Queue,
     routers::Router,
+    stats::{Stats, StepStats},
 };
 use rand::{distr::Distribution, rng, Rng};
 use std::{
@@ -119,26 +120,7 @@ impl<D: Distribution<f32>, R: Router> ProcessBlock<D, R> {
     }
 }
 
-impl<D: Distribution<f32>, R: Router> Block for ProcessBlock<D, R> {
-    fn id(&self) -> BlockId {
-        self.id
-    }
-
-    fn next(&self, blocks: &HashMap<BlockId, Box<dyn Block>>) -> Option<BlockId> {
-        self.router.next(blocks)
-    }
-
-    fn step_stats(&self) -> Box<dyn Debug> {
-        Box::new(ProcessBlockStepStats {
-            processed: self.processed,
-            rejections: self.rejections,
-            workload: self.devices.workload(),
-            rejection_probability: self.rejections as f32
-                / (self.rejections + self.processed) as f32,
-            queue_length: self.queue.as_ref().map(|q| q.length).unwrap_or(0),
-        })
-    }
-
+impl<D: Distribution<f32>, R: Router> Stats for ProcessBlock<D, R> {
     fn stats(&self) -> Box<dyn Debug> {
         Box::new(ProcessBlockStats {
             processed: self.processed,
@@ -159,6 +141,29 @@ impl<D: Distribution<f32>, R: Router> Block for ProcessBlock<D, R> {
                 .map(|q| q.total_weighted_time() / self.processed as f32)
                 .unwrap_or(0.0),
         })
+    }
+}
+
+impl<D: Distribution<f32>, R: Router> StepStats for ProcessBlock<D, R> {
+    fn step_stats(&self) -> Box<dyn Debug> {
+        Box::new(ProcessBlockStepStats {
+            processed: self.processed,
+            rejections: self.rejections,
+            workload: self.devices.workload(),
+            rejection_probability: self.rejections as f32
+                / (self.rejections + self.processed) as f32,
+            queue_length: self.queue.as_ref().map(|q| q.length).unwrap_or(0),
+        })
+    }
+}
+
+impl<D: Distribution<f32>, R: Router> Block for ProcessBlock<D, R> {
+    fn id(&self) -> BlockId {
+        self.id
+    }
+
+    fn next(&self, blocks: &HashMap<BlockId, Box<dyn Block>>) -> Option<BlockId> {
+        self.router.next(blocks)
     }
 
     fn process_in(&mut self, event_queue: &mut BinaryHeap<Event>, simulation_duration: Duration) {
