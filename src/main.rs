@@ -19,7 +19,7 @@ fn main() {
     let mut network = QueueNetwork::new()
         .add_block(
             CreateBlock::builder("create")
-                .distribution(Exp::new(1.0 / 2.0).unwrap())
+                .distribution(Exp::new(1.0 / 0.5).unwrap())
                 .router(ShortestQueueRouter::new(&["process1", "process2"]))
                 .build(),
         )
