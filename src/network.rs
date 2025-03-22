@@ -4,12 +4,13 @@ use crate::{
 };
 use std::{
     collections::{BinaryHeap, HashMap},
+    thread,
     time::Duration,
 };
 
 pub struct QueueNetwork {
     event_queue: BinaryHeap<Event>,
-    real_time: bool,
+    speed: Option<f32>,
     on_simulation_step: Box<dyn Fn(&QueueNetwork, Event)>,
     pub blocks: HashMap<BlockId, Box<dyn Block>>,
 }
@@ -18,14 +19,19 @@ impl QueueNetwork {
     pub fn new() -> QueueNetwork {
         QueueNetwork {
             event_queue: BinaryHeap::new(),
-            real_time: false,
+            speed: None,
             on_simulation_step: Box::new(|_, _| {}),
             blocks: HashMap::new(),
         }
     }
 
     pub fn real_time(mut self) -> Self {
-        self.real_time = true;
+        self.speed = Some(1.0);
+        self
+    }
+
+    pub fn speed(mut self, speed: f32) -> Self {
+        self.speed = Some(speed);
         self
     }
 
@@ -47,9 +53,13 @@ impl QueueNetwork {
             block.init(&mut self.event_queue);
         }
 
+        let mut prev_time = Duration::from_secs(0);
         while let Some(Event(time, block_id, event_type)) = self.event_queue.pop() {
-            if self.real_time {
-                std::thread::sleep(time);
+            if let Some(speed) = self.speed {
+                thread::sleep(Duration::from_secs_f32(
+                    (time - prev_time).as_secs_f32() / speed,
+                ));
+                prev_time = time
             }
             if time >= duration {
                 break;
