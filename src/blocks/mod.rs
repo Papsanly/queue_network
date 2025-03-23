@@ -15,7 +15,7 @@ use std::{
     time::Duration,
 };
 
-pub type BlockId = &'static str;
+pub type BlockId = String;
 
 pub trait Block: Stats + StepStats {
     fn id(&self) -> BlockId;

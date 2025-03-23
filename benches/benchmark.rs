@@ -1,7 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use queue_network::{
     blocks::{CreateBlock, DisposeBlock, ProcessBlock},
-    distributions::Deterministic,
     network::QueueNetwork,
     queue::Queue,
     routers::DirectRouter,
@@ -9,7 +8,7 @@ use queue_network::{
 use rand_distr::Normal;
 use std::time::Duration;
 
-fn get_parallel(size: usize) -> QueueNetwork {
+fn get_parallel(size: u64) -> QueueNetwork {
     let mut network = QueueNetwork::new().add_block(
         CreateBlock::builder("create")
             .distribution(Normal::new(1.0, 0.1).unwrap())
@@ -18,7 +17,7 @@ fn get_parallel(size: usize) -> QueueNetwork {
     );
     for i in 0..size {
         network = network.add_block(
-            ProcessBlock::builder(&format!("process{}", i))
+            ProcessBlock::builder(format!("process{}", i))
                 .distribution(Normal::new(1.0, 0.1).unwrap())
                 .queue(Queue::from_capacity(10))
                 .router(DirectRouter::new("dispose"))
@@ -28,7 +27,7 @@ fn get_parallel(size: usize) -> QueueNetwork {
     network.add_block(DisposeBlock::new("dispose"))
 }
 
-fn get_sequential(size: usize) -> QueueNetwork {
+fn get_sequential(size: u64) -> QueueNetwork {
     let mut network = QueueNetwork::new().add_block(
         CreateBlock::builder("create")
             .distribution(Normal::new(1.0, 0.1).unwrap())
@@ -37,16 +36,16 @@ fn get_sequential(size: usize) -> QueueNetwork {
     );
     for i in 0..size {
         network = network.add_block(
-            ProcessBlock::builder(&format!("process{}", i))
+            ProcessBlock::builder(format!("process{}", i))
                 .distribution(Normal::new(1.0, 0.1).unwrap())
                 .queue(Queue::from_capacity(10))
-                .router(DirectRouter::new(&format!("process{}", i + 1)))
+                .router(DirectRouter::new(format!("process{}", i + 1)))
                 .build(),
         );
     }
     network
         .add_block(
-            ProcessBlock::builder(&format!("process{}", size))
+            ProcessBlock::builder(format!("process{}", size))
                 .distribution(Normal::new(1.0, 0.1).unwrap())
                 .queue(Queue::from_capacity(10))
                 .router(DirectRouter::new("dispose"))
@@ -56,14 +55,14 @@ fn get_sequential(size: usize) -> QueueNetwork {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    let mut group = c.benchmark_group("matrix_multiplication");
-    for size in (1..10usize).map(|x| 100 * x) {
+    let mut group = c.benchmark_group("queue_network");
+    for size in (1..20).map(|x| 10 * x) {
         group.bench_with_input(BenchmarkId::new("sequential", size), &size, |b, &size| {
-            let network = black_box(get_sequential(size));
+            let mut network = black_box(get_sequential(size));
             b.iter(|| network.simulate(Duration::from_secs(size)));
         });
         group.bench_with_input(BenchmarkId::new("parallel", size), &size, |b, &size| {
-            let network = black_box(get_parallel(size));
+            let mut network = black_box(get_parallel(size));
             b.iter(|| network.simulate(Duration::from_secs(size)));
         });
     }

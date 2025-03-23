@@ -73,9 +73,9 @@ pub struct CreateBlock<D, R> {
 }
 
 impl CreateBlock<(), ()> {
-    pub fn builder(id: BlockId) -> CreateBlockBuilder<(), ()> {
+    pub fn builder(id: impl Into<BlockId>) -> CreateBlockBuilder<(), ()> {
         CreateBlockBuilder {
-            id,
+            id: id.into(),
             first_at: (0, Duration::ZERO),
             router: (),
             distribution: (),
@@ -105,7 +105,7 @@ impl<D: Distribution<f32>, R: Router> StepStats for CreateBlock<D, R> {
 
 impl<D: Distribution<f32>, R: Router> Block for CreateBlock<D, R> {
     fn id(&self) -> BlockId {
-        self.id
+        self.id.clone()
     }
 
     fn next(&self, blocks: &HashMap<BlockId, Box<dyn Block>>) -> Option<BlockId> {
@@ -115,7 +115,7 @@ impl<D: Distribution<f32>, R: Router> Block for CreateBlock<D, R> {
     fn init(&mut self, event_queue: &mut BinaryHeap<Event>) {
         event_queue.push(Event(
             self.first_at.1,
-            self.id,
+            self.id.clone(),
             EventType::Out,
             self.first_at.0,
         ));
@@ -129,7 +129,7 @@ impl<D: Distribution<f32>, R: Router> Block for CreateBlock<D, R> {
     ) {
         event_queue.push(Event(
             simulation_duration + self.delay(),
-            self.id,
+            self.id.clone(),
             EventType::Out,
             event_id + 1,
         ));

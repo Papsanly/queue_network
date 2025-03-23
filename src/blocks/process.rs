@@ -102,9 +102,9 @@ impl<D: Distribution<f32>, R: Router> ProcessBlockBuilder<D, R> {
 }
 
 impl ProcessBlock<(), ()> {
-    pub fn builder(id: BlockId) -> ProcessBlockBuilder<(), ()> {
+    pub fn builder(id: impl Into<BlockId>) -> ProcessBlockBuilder<(), ()> {
         ProcessBlockBuilder {
-            id,
+            id: id.into(),
             router: (),
             distribution: (),
             devices: Devices::default(),
@@ -160,7 +160,7 @@ impl<D: Distribution<f32>, R: Router> StepStats for ProcessBlock<D, R> {
 
 impl<D: Distribution<f32>, R: Router> Block for ProcessBlock<D, R> {
     fn id(&self) -> BlockId {
-        self.id
+        self.id.clone()
     }
 
     fn next(&self, blocks: &HashMap<BlockId, Box<dyn Block>>) -> Option<BlockId> {
@@ -170,7 +170,12 @@ impl<D: Distribution<f32>, R: Router> Block for ProcessBlock<D, R> {
     fn init(&mut self, event_queue: &mut BinaryHeap<Event>) {
         for event_id in &self.devices.workers {
             if let &Some(event_id) = event_id {
-                event_queue.push(Event(self.delay(), self.id, EventType::Out, event_id));
+                event_queue.push(Event(
+                    self.delay(),
+                    self.id.clone(),
+                    EventType::Out,
+                    event_id,
+                ));
             }
         }
     }
@@ -185,7 +190,7 @@ impl<D: Distribution<f32>, R: Router> Block for ProcessBlock<D, R> {
             self.devices.load(event_id, simulation_duration);
             event_queue.push(Event(
                 simulation_duration + self.delay(),
-                self.id,
+                self.id.clone(),
                 EventType::Out,
                 event_id,
             ));
@@ -220,7 +225,7 @@ impl<D: Distribution<f32>, R: Router> Block for ProcessBlock<D, R> {
             self.devices.load(next_event_id, simulation_duration);
             event_queue.push(Event(
                 simulation_duration + delay,
-                self.id,
+                self.id.clone(),
                 EventType::Out,
                 next_event_id,
             ));

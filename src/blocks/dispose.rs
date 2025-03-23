@@ -20,9 +20,9 @@ pub struct DisposeBlock {
 }
 
 impl DisposeBlock {
-    pub fn new(id: BlockId) -> Self {
+    pub fn new(id: impl Into<BlockId>) -> Self {
         Self {
-            id,
+            id: id.into(),
             disposed_events: 0,
         }
     }
@@ -44,7 +44,7 @@ impl StepStats for DisposeBlock {
 
 impl Block for DisposeBlock {
     fn id(&self) -> BlockId {
-        self.id
+        self.id.clone()
     }
 
     fn next(&self, _blocks: &HashMap<BlockId, Box<dyn Block>>) -> Option<BlockId> {

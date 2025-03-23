@@ -37,14 +37,14 @@ fn main() {
                 .distribution(Exp::new(1.0).unwrap())
                 .queue(Queue::from_capacity(5))
                 .router(ProbabilityRouter::new(&[
-                    (0.5, "process2"),
-                    (0.5, "dispose"),
+                    (0.5, "process2".into()),
+                    (0.5, "dispose".into()),
                 ]))
                 .build(),
         )
         .add_block(DisposeBlock::new("dispose"))
         .on_simulation_step(|network, Event(time, block_id, event_type, id)| {
-            let block = network.blocks.get(block_id).unwrap();
+            let block = network.blocks.get(&block_id).unwrap();
             println!(
                 "Elapsed Time: {:.3} | Event: {:?} | Id: {} | {}: {:#?}",
                 time.as_secs_f32(),
@@ -59,10 +59,10 @@ fn main() {
 
     println!("\n==== Final Simulation State ====\n");
     let mut blocks = network.blocks.values().collect::<Vec<_>>();
-    blocks.sort_by_key(|block| match block.id() {
+    blocks.sort_by_key(|block| match block.id().as_str() {
         "create" => "0".to_string(),
         "dispose" => "2".to_string(),
-        _ => "1".to_string() + block.id(),
+        _ => "1".to_string() + &block.id(),
     });
     for block in blocks {
         println!("{}: {:#?}", block.id(), block.stats());

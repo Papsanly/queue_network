@@ -9,13 +9,13 @@ pub struct DirectRouter {
 }
 
 impl DirectRouter {
-    pub fn new(next: BlockId) -> Self {
-        Self { next }
+    pub fn new(next: impl Into<BlockId>) -> Self {
+        Self { next: next.into() }
     }
 }
 
 impl Router for DirectRouter {
     fn next(&self, _blocks: &HashMap<BlockId, Box<dyn Block>>) -> Option<BlockId> {
-        Some(self.next)
+        Some(self.next.clone())
     }
 }
