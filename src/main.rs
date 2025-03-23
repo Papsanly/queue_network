@@ -53,12 +53,13 @@ fn main() {
                 .build(),
         )
         .add_block(DisposeBlock::new("dispose"))
-        .on_simulation_step(|network, Event(time, block_id, event_type)| {
+        .on_simulation_step(|network, Event(time, block_id, event_type, id)| {
             let block = network.blocks.get(block_id).unwrap();
             println!(
-                "Elapsed Time: {:.3} | Event: {:?} {}: {:#?}",
+                "Elapsed Time: {:.3} | Event: {:?} | Id: {} | {}: {:#?}",
                 time.as_secs_f32(),
                 event_type,
+                id,
                 block_id,
                 block.step_stats()
             );

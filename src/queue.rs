@@ -2,11 +2,11 @@ use crate::{
     stats::{Stats, StepStats},
     weighted_average::weighted_average,
 };
-use std::{fmt::Debug, time::Duration};
+use std::{collections::VecDeque, fmt::Debug, time::Duration};
 
 #[derive(Default)]
 pub struct Queue {
-    pub length: usize,
+    queue: VecDeque<usize>,
     pub capacity: Option<usize>,
     pub lengths: Vec<(Duration, usize)>,
 }
@@ -25,27 +25,37 @@ pub struct QueueStepStats {
 impl Queue {
     pub fn from_capacity(capacity: usize) -> Self {
         Self {
-            length: 0,
+            queue: VecDeque::with_capacity(capacity),
             capacity: Some(capacity),
             lengths: Vec::new(),
         }
     }
+}
 
-    pub fn enqueue(&mut self, simulation_duration: Duration) {
-        self.length += 1;
-        self.lengths.push((simulation_duration, self.length));
+impl Queue {
+    pub fn len(&self) -> usize {
+        self.queue.len()
     }
 
-    pub fn dequeue(&mut self, simulation_duration: Duration) {
-        self.length -= 1;
-        self.lengths.push((simulation_duration, self.length));
+    pub fn enqueue(&mut self, event_id: usize, simulation_duration: Duration) {
+        self.queue.push_back(event_id);
+        self.lengths.push((simulation_duration, self.queue.len()));
+    }
+
+    pub fn dequeue(&mut self, simulation_duration: Duration) -> usize {
+        let event_id = self
+            .queue
+            .pop_front()
+            .expect("queue should not be empty when dequeueing an event");
+        self.lengths.push((simulation_duration, self.queue.len()));
+        event_id
     }
 }
 
 impl Stats for Queue {
     fn stats(&self) -> Box<dyn Debug> {
         Box::new(QueueStats {
-            final_length: self.length,
+            final_length: self.queue.len(),
             average_length: weighted_average(&self.lengths),
         })
     }
@@ -54,7 +64,7 @@ impl Stats for Queue {
 impl StepStats for Queue {
     fn step_stats(&self) -> Box<dyn Debug> {
         Box::new(QueueStepStats {
-            length: self.length,
+            length: self.queue.len(),
         })
     }
 }

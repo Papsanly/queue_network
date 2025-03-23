@@ -7,7 +7,7 @@ pub enum EventType {
     Out,
 }
 
-pub struct Event(pub Duration, pub BlockId, pub EventType);
+pub struct Event(pub Duration, pub BlockId, pub EventType, pub usize);
 
 impl PartialEq<Event> for Event {
     fn eq(&self, other: &Self) -> bool {

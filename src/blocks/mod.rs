@@ -21,10 +21,16 @@ pub trait Block: Stats + StepStats {
     fn id(&self) -> BlockId;
     fn next(&self, blocks: &HashMap<BlockId, Box<dyn Block>>) -> Option<BlockId>;
     fn init(&mut self, _event_queue: &mut BinaryHeap<Event>) {}
-    fn process_in(&mut self, _event_queue: &mut BinaryHeap<Event>, _simulation_duration: Duration) {
+    fn process_in(
+        &mut self,
+        _event_id: usize,
+        _event_queue: &mut BinaryHeap<Event>,
+        _simulation_duration: Duration,
+    ) {
     }
     fn process_out(
         &mut self,
+        _event_id: usize,
         _event_queue: &mut BinaryHeap<Event>,
         _simulation_duration: Duration,
     ) {

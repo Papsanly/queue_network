@@ -51,7 +51,12 @@ impl Block for DisposeBlock {
         None
     }
 
-    fn process_in(&mut self, _event_queue: &mut BinaryHeap<Event>, _simulation_duration: Duration) {
+    fn process_in(
+        &mut self,
+        _event_id: usize,
+        _event_queue: &mut BinaryHeap<Event>,
+        _simulation_duration: Duration,
+    ) {
         self.disposed_events += 1;
     }
 }

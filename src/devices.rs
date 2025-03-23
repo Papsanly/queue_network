@@ -5,8 +5,8 @@ use crate::{
 use std::{fmt::Debug, time::Duration};
 
 pub struct Devices {
-    pub count: usize,
-    pub idle: usize,
+    pub busy: usize,
+    pub workers: Vec<Option<usize>>,
     pub workloads: Vec<(Duration, f32)>,
 }
 
@@ -30,26 +30,50 @@ impl Default for Devices {
 impl Devices {
     pub fn new(count: usize) -> Self {
         Self {
-            count,
-            idle: count,
+            busy: 0,
+            workers: vec![None; count],
             workloads: Vec::new(),
         }
     }
 
-    pub fn load(&mut self, simulation_duration: Duration) {
-        self.idle = self.idle.checked_sub(1).expect("all devices are busy");
+    pub fn idle(&self) -> usize {
+        self.workers.len() - self.busy
+    }
+
+    pub fn count(&self) -> usize {
+        self.workers.len()
+    }
+
+    pub fn load(&mut self, event_id: usize, simulation_duration: Duration) {
+        if self.workers.len() == self.busy {
+            panic!("all devices are busy");
+        }
+        let available_worker_idx = self
+            .workers
+            .iter()
+            .position(|i| i.is_none())
+            .expect("some worker should be available");
+        self.workers[available_worker_idx] = Some(event_id);
+        self.busy += 1;
         self.workloads.push((simulation_duration, self.workload()));
     }
 
-    pub fn unload(&mut self, simulation_duration: Duration) {
-        if self.count != self.idle {
-            self.idle += 1;
-            self.workloads.push((simulation_duration, self.workload()));
+    pub fn unload(&mut self, event_id: usize, simulation_duration: Duration) {
+        if self.busy == 0 {
+            panic!("no devices are busy");
         }
+        let event_idx = self
+            .workers
+            .iter()
+            .position(|i| i.is_some_and(|e| e == event_id))
+            .expect("event id to unload should be in the list of workers");
+        self.workers[event_idx] = None;
+        self.busy -= 1;
+        self.workloads.push((simulation_duration, self.workload()));
     }
 
     pub fn workload(&self) -> f32 {
-        (self.count - self.idle) as f32 / self.count as f32
+        self.busy as f32 / self.workers.len() as f32
     }
 }
 
