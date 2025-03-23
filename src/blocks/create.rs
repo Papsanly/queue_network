@@ -13,7 +13,7 @@ use std::{
 
 pub struct CreateBlockBuilder<Distribution, Router> {
     id: BlockId,
-    first_at: Duration,
+    first_at: (usize, Duration),
     router: Router,
     distribution: Distribution,
 }
@@ -41,7 +41,7 @@ impl<D> CreateBlockBuilder<D, ()> {
 }
 
 impl<D, R> CreateBlockBuilder<D, R> {
-    pub fn first_at(mut self, first_at: Duration) -> CreateBlockBuilder<D, R> {
+    pub fn first_at(mut self, first_at: (usize, Duration)) -> CreateBlockBuilder<D, R> {
         self.first_at = first_at;
         self
     }
@@ -68,7 +68,7 @@ pub struct CreateBlock<D, R> {
     pub id: BlockId,
     pub created_events: usize,
     router: R,
-    first_at: Duration,
+    first_at: (usize, Duration),
     distribution: D,
 }
 
@@ -76,7 +76,7 @@ impl CreateBlock<(), ()> {
     pub fn builder(id: BlockId) -> CreateBlockBuilder<(), ()> {
         CreateBlockBuilder {
             id,
-            first_at: Duration::ZERO,
+            first_at: (0, Duration::ZERO),
             router: (),
             distribution: (),
         }
@@ -113,14 +113,25 @@ impl<D: Distribution<f32>, R: Router> Block for CreateBlock<D, R> {
     }
 
     fn init(&mut self, event_queue: &mut BinaryHeap<Event>) {
-        event_queue.push(Event(self.first_at, self.id, EventType::Out));
+        event_queue.push(Event(
+            self.first_at.1,
+            self.id,
+            EventType::Out,
+            self.first_at.0,
+        ));
     }
 
-    fn process_out(&mut self, event_queue: &mut BinaryHeap<Event>, simulation_duration: Duration) {
+    fn process_out(
+        &mut self,
+        event_id: usize,
+        event_queue: &mut BinaryHeap<Event>,
+        simulation_duration: Duration,
+    ) {
         event_queue.push(Event(
             simulation_duration + self.delay(),
             self.id,
             EventType::Out,
+            event_id + 1,
         ));
         self.created_events += 1;
     }

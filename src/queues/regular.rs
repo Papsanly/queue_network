@@ -3,11 +3,11 @@ use crate::{
     stats::{Stats, StepStats},
     weighted_average::{weighted_average, weighted_total},
 };
-use std::{fmt::Debug, time::Duration};
+use std::{collections::VecDeque, fmt::Debug, time::Duration};
 
 #[derive(Default)]
 pub struct RegularQueue {
-    pub length: usize,
+    queue: VecDeque<usize>,
     pub capacity: Option<usize>,
     pub lengths: Vec<(Duration, usize)>,
 }
@@ -26,7 +26,7 @@ pub struct QueueStepStats {
 impl RegularQueue {
     pub fn from_capacity(capacity: usize) -> Self {
         Self {
-            length: 0,
+            queue: VecDeque::with_capacity(capacity),
             capacity: Some(capacity),
             lengths: Vec::new(),
         }
@@ -35,7 +35,7 @@ impl RegularQueue {
 
 impl Queue for RegularQueue {
     fn length(&self) -> usize {
-        self.length
+        self.queue.len()
     }
 
     fn weighted_total(&self) -> f32 {
@@ -46,21 +46,25 @@ impl Queue for RegularQueue {
         self.capacity
     }
 
-    fn enqueue(&mut self, simulation_duration: Duration) {
-        self.length += 1;
-        self.lengths.push((simulation_duration, self.length));
+    fn enqueue(&mut self, event_id: usize, simulation_duration: Duration) {
+        self.queue.push_back(event_id);
+        self.lengths.push((simulation_duration, self.queue.len()));
     }
 
-    fn dequeue(&mut self, simulation_duration: Duration) {
-        self.length -= 1;
-        self.lengths.push((simulation_duration, self.length));
+    fn dequeue(&mut self, simulation_duration: Duration) -> usize {
+        let event_id = self
+            .queue
+            .pop_front()
+            .expect("queue should not be empty when dequeueing an event");
+        self.lengths.push((simulation_duration, self.queue.len()));
+        event_id
     }
 }
 
 impl Stats for RegularQueue {
     fn stats(&self) -> Box<dyn Debug> {
         Box::new(QueueStats {
-            final_length: self.length,
+            final_length: self.queue.len(),
             average_length: weighted_average(&self.lengths),
         })
     }
@@ -69,7 +73,7 @@ impl Stats for RegularQueue {
 impl StepStats for RegularQueue {
     fn step_stats(&self) -> Box<dyn Debug> {
         Box::new(QueueStepStats {
-            length: self.length,
+            length: self.queue.len(),
         })
     }
 }

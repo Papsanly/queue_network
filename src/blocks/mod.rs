@@ -25,10 +25,16 @@ pub trait Block: Stats + StepStats {
         None
     }
     fn init(&mut self, _event_queue: &mut BinaryHeap<Event>) {}
-    fn process_in(&mut self, _event_queue: &mut BinaryHeap<Event>, _simulation_duration: Duration) {
+    fn process_in(
+        &mut self,
+        _event_id: usize,
+        _event_queue: &mut BinaryHeap<Event>,
+        _simulation_duration: Duration,
+    ) {
     }
     fn process_out(
         &mut self,
+        _event_id: usize,
         _event_queue: &mut BinaryHeap<Event>,
         _simulation_duration: Duration,
     ) {

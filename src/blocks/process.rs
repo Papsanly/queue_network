@@ -166,49 +166,63 @@ impl<D: Distribution<f32>, R: Router> Block for ProcessBlock<D, R> {
         self.router.next(blocks)
     }
 
-    fn queue(&self) -> Option<&dyn Queue> {
-        self.queue.as_deref()
-    }
-
     fn init(&mut self, event_queue: &mut BinaryHeap<Event>) {
-        if self.devices.idle != self.devices.count {
-            event_queue.push(Event(self.delay(), self.id, EventType::Out));
+        for event_id in &self.devices.workers {
+            if let &Some(event_id) = event_id {
+                event_queue.push(Event(self.delay(), self.id, EventType::Out, event_id));
+            }
         }
     }
 
-    fn process_in(&mut self, event_queue: &mut BinaryHeap<Event>, simulation_duration: Duration) {
-        if self.devices.idle != 0 {
+    fn process_in(
+        &mut self,
+        event_id: usize,
+        event_queue: &mut BinaryHeap<Event>,
+        simulation_duration: Duration,
+    ) {
+        if self.devices.idle() != 0 {
+            self.devices.load(event_id, simulation_duration);
             event_queue.push(Event(
                 simulation_duration + self.delay(),
                 self.id,
                 EventType::Out,
+                event_id,
             ));
-            self.devices.load(simulation_duration);
         } else {
             let Some(queue) = &mut self.queue else {
                 self.rejections += 1;
                 return;
             };
             if queue.length() < queue.capacity().unwrap_or(usize::MAX) {
-                queue.enqueue(simulation_duration);
+                queue.enqueue(event_id, simulation_duration);
             } else {
                 self.rejections += 1;
             }
         }
     }
 
-    fn process_out(&mut self, event_queue: &mut BinaryHeap<Event>, simulation_duration: Duration) {
+    fn process_out(
+        &mut self,
+        event_id: usize,
+        event_queue: &mut BinaryHeap<Event>,
+        simulation_duration: Duration,
+    ) {
         self.processed += 1;
         let delay = self.delay();
         let Some(queue) = &mut self.queue else {
-            self.devices.unload(simulation_duration);
+            self.devices.unload(event_id, simulation_duration);
             return;
         };
-        if queue.length() == 0 {
-            self.devices.unload(simulation_duration);
-        } else {
-            queue.dequeue(simulation_duration);
-            event_queue.push(Event(simulation_duration + delay, self.id, EventType::Out));
+        self.devices.unload(event_id, simulation_duration);
+        if queue.len() != 0 {
+            let next_event_id = queue.dequeue(simulation_duration);
+            self.devices.load(next_event_id, simulation_duration);
+            event_queue.push(Event(
+                simulation_duration + delay,
+                self.id,
+                EventType::Out,
+                next_event_id,
+            ));
         }
     }
 }

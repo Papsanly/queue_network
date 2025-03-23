@@ -62,7 +62,7 @@ impl QueueNetwork {
         }
 
         let mut prev_time = Duration::from_secs(0);
-        while let Some(Event(time, block_id, event_type)) = self.event_queue.pop() {
+        while let Some(Event(time, block_id, event_type, id)) = self.event_queue.pop() {
             if self.step_through {
                 stdin().read_line(&mut String::new()).unwrap();
             } else if let Some(speed) = self.speed {
@@ -82,15 +82,15 @@ impl QueueNetwork {
                 .next(&self.blocks);
             let block = self.blocks.get_mut(block_id).expect(expect_message);
             match event_type {
-                EventType::In => block.process_in(&mut self.event_queue, time),
+                EventType::In => block.process_in(id, &mut self.event_queue, time),
                 EventType::Out => {
-                    block.process_out(&mut self.event_queue, time);
+                    block.process_out(id, &mut self.event_queue, time);
                     if let Some(next) = next {
-                        self.event_queue.push(Event(time, next, EventType::In));
+                        self.event_queue.push(Event(time, next, EventType::In, id));
                     }
                 }
             }
-            (self.on_simulation_step)(self, Event(time, block_id, event_type));
+            (self.on_simulation_step)(self, Event(time, block_id, event_type, id));
         }
     }
 }
