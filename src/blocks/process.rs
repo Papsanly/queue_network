@@ -166,6 +166,10 @@ impl<D: Distribution<f32>, R: Router> Block for ProcessBlock<D, R> {
         self.router.next(blocks)
     }
 
+    fn queue(&self) -> Option<&dyn Queue> {
+        self.queue.as_deref()
+    }
+
     fn init(&mut self, event_queue: &mut BinaryHeap<Event>) {
         for event_id in &self.devices.workers {
             if let &Some(event_id) = event_id {
