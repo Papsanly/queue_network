@@ -162,7 +162,6 @@ impl Queue for SharedQueue {
             .expect("queue should exist in shared queue pool")
             .enqueue(event_id, simulation_duration);
         if self.pool.redistribute(simulation_duration) {
-            dbg!("redistributed!");
             self.transitions += 1;
         }
     }

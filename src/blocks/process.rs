@@ -30,6 +30,7 @@ pub struct ProcessBlockStats<D, Q> {
     pub rejection_probability: f32,
     pub queue: Q,
     pub average_waited_time: f32,
+    pub average_event_duration: f32,
 }
 
 pub struct ProcessBlock<D, R> {
@@ -38,6 +39,7 @@ pub struct ProcessBlock<D, R> {
     pub devices: Devices,
     pub processed: usize,
     pub rejections: usize,
+    event_durations: HashMap<usize, (Option<Duration>, Option<Duration>)>,
     router: R,
     distribution: D,
 }
@@ -96,6 +98,7 @@ impl<D: Distribution<f32>, R: Router> ProcessBlockBuilder<D, R> {
             devices: self.devices,
             router: self.router,
             distribution: self.distribution,
+            event_durations: HashMap::new(),
         }
     }
 }
@@ -120,6 +123,10 @@ impl<D: Distribution<f32>, R: Router> ProcessBlock<D, R> {
 
 impl<D: Distribution<f32>, R: Router> Stats for ProcessBlock<D, R> {
     fn stats(&self) -> Box<dyn Debug> {
+        let event_durations = self
+            .event_durations
+            .iter()
+            .filter(|(_, (start, end))| start.is_some() && end.is_some());
         Box::new(ProcessBlockStats {
             processed: self.processed,
             rejections: self.rejections,
@@ -136,6 +143,12 @@ impl<D: Distribution<f32>, R: Router> Stats for ProcessBlock<D, R> {
                 .as_ref()
                 .map(|q| q.weighted_total() / self.processed as f32)
                 .unwrap_or(0.0),
+            average_event_duration: event_durations
+                .clone()
+                .map(|(_, (start, end))| end.unwrap() - start.unwrap())
+                .sum::<Duration>()
+                .as_secs_f32()
+                / event_durations.count() as f32,
         })
     }
 }
@@ -162,6 +175,10 @@ impl<D: Distribution<f32>, R: Router> Block for ProcessBlock<D, R> {
         self.id
     }
 
+    fn kind(&self) -> &'static str {
+        "process"
+    }
+
     fn next(&self, blocks: &HashMap<BlockId, Box<dyn Block>>) -> Option<BlockId> {
         self.router.next(blocks)
     }
@@ -183,7 +200,8 @@ impl<D: Distribution<f32>, R: Router> Block for ProcessBlock<D, R> {
         event_id: usize,
         event_queue: &mut BinaryHeap<Event>,
         simulation_duration: Duration,
-    ) {
+    ) -> bool {
+        self.event_durations.entry(event_id).or_default().0 = Some(simulation_duration);
         if self.devices.idle() != 0 {
             self.devices.load(event_id, simulation_duration);
             event_queue.push(Event(
@@ -192,15 +210,18 @@ impl<D: Distribution<f32>, R: Router> Block for ProcessBlock<D, R> {
                 EventType::Out,
                 event_id,
             ));
+            true
         } else {
             let Some(queue) = &mut self.queue else {
                 self.rejections += 1;
-                return;
+                return false;
             };
             if queue.length() < queue.capacity().unwrap_or(usize::MAX) {
                 queue.enqueue(event_id, simulation_duration);
+                true
             } else {
                 self.rejections += 1;
+                false
             }
         }
     }
@@ -211,6 +232,7 @@ impl<D: Distribution<f32>, R: Router> Block for ProcessBlock<D, R> {
         event_queue: &mut BinaryHeap<Event>,
         simulation_duration: Duration,
     ) {
+        self.event_durations.entry(event_id).or_default().1 = Some(simulation_duration);
         self.processed += 1;
         let delay = self.delay();
         let Some(queue) = &mut self.queue else {

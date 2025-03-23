@@ -1,13 +1,22 @@
 use crate::{
     blocks::{Block, BlockId},
     events::{Event, EventType},
+    stats::Stats,
+    weighted_average::weighted_average,
 };
 use std::{
     collections::{BinaryHeap, HashMap},
+    fmt::Debug,
     io::stdin,
     thread,
     time::Duration,
 };
+
+#[derive(Debug)]
+struct QueueNetworkStats {
+    average_event_count: f32,
+    average_event_duration: f32,
+}
 
 pub struct QueueNetwork {
     event_queue: BinaryHeap<Event>,
@@ -15,6 +24,27 @@ pub struct QueueNetwork {
     step_through: bool,
     on_simulation_step: Box<dyn Fn(&QueueNetwork, Event)>,
     pub blocks: HashMap<BlockId, Box<dyn Block>>,
+    pub event_count: usize,
+    event_counts: Vec<(Duration, usize)>,
+    event_durations: HashMap<usize, (Option<Duration>, Option<Duration>)>,
+}
+
+impl Stats for QueueNetwork {
+    fn stats(&self) -> Box<dyn Debug> {
+        let event_durations = self
+            .event_durations
+            .iter()
+            .filter(|(_, (start, end))| start.is_some() && end.is_some());
+        Box::new(QueueNetworkStats {
+            average_event_count: weighted_average(&self.event_counts),
+            average_event_duration: event_durations
+                .clone()
+                .map(|(_, (start, end))| end.unwrap() - start.unwrap())
+                .sum::<Duration>()
+                .as_secs_f32()
+                / event_durations.count() as f32,
+        })
+    }
 }
 
 impl QueueNetwork {
@@ -25,6 +55,9 @@ impl QueueNetwork {
             step_through: false,
             on_simulation_step: Box::new(|_, _| {}),
             blocks: HashMap::new(),
+            event_count: 0,
+            event_counts: Vec::new(),
+            event_durations: HashMap::new(),
         }
     }
 
@@ -82,9 +115,23 @@ impl QueueNetwork {
                 .next(&self.blocks);
             let block = self.blocks.get_mut(block_id).expect(expect_message);
             match event_type {
-                EventType::In => block.process_in(id, &mut self.event_queue, time),
+                EventType::In => {
+                    let accepted = block.process_in(id, &mut self.event_queue, time);
+                    if block.kind() == "dispose" {
+                        self.event_count -= 1;
+                        self.event_counts.push((time, self.event_count));
+                        self.event_durations.entry(id).or_default().1 = Some(time);
+                    }
+                    if accepted && block.kind() == "process" {
+                        self.event_count += 1;
+                        self.event_counts.push((time, self.event_count));
+                    }
+                }
                 EventType::Out => {
                     block.process_out(id, &mut self.event_queue, time);
+                    if block.kind() == "create" {
+                        self.event_durations.entry(id).or_default().0 = Some(time);
+                    }
                     if let Some(next) = next {
                         self.event_queue.push(Event(time, next, EventType::In, id));
                     }

@@ -47,6 +47,10 @@ impl Block for DisposeBlock {
         self.id
     }
 
+    fn kind(&self) -> &'static str {
+        "dispose"
+    }
+
     fn next(&self, _blocks: &HashMap<BlockId, Box<dyn Block>>) -> Option<BlockId> {
         None
     }
@@ -56,7 +60,8 @@ impl Block for DisposeBlock {
         _event_id: usize,
         _event_queue: &mut BinaryHeap<Event>,
         _simulation_duration: Duration,
-    ) {
+    ) -> bool {
         self.disposed_events += 1;
+        true
     }
 }

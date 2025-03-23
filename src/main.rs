@@ -15,6 +15,7 @@ use crate::{
     network::QueueNetwork,
     queues::{Queue, RegularQueue, SharedQueuePool},
     routers::{DirectRouter, ShortestQueueRouter},
+    stats::Stats,
 };
 use rand_distr::{Exp, Normal};
 use std::time::Duration;
@@ -37,7 +38,6 @@ fn main() {
         });
 
     let mut network = QueueNetwork::new()
-        .step_through()
         .add_block(
             CreateBlock::builder("create")
                 .distribution(Exp::new(1.0 / 0.5).unwrap())
@@ -81,6 +81,7 @@ fn main() {
                 block.step_stats()
             );
         });
+    network.event_count = 6;
 
     network.simulate(Duration::from_secs(1000));
 
@@ -94,4 +95,5 @@ fn main() {
     for block in blocks {
         println!("{}: {:#?}", block.id(), block.stats());
     }
+    println!("network: {:#?}", network.stats());
 }

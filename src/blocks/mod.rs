@@ -20,6 +20,7 @@ pub type BlockId = &'static str;
 
 pub trait Block: Stats + StepStats {
     fn id(&self) -> BlockId;
+    fn kind(&self) -> &'static str;
     fn next(&self, blocks: &HashMap<BlockId, Box<dyn Block>>) -> Option<BlockId>;
     fn queue(&self) -> Option<&dyn Queue> {
         None
@@ -30,7 +31,8 @@ pub trait Block: Stats + StepStats {
         _event_id: usize,
         _event_queue: &mut BinaryHeap<Event>,
         _simulation_duration: Duration,
-    ) {
+    ) -> bool {
+        false
     }
     fn process_out(
         &mut self,

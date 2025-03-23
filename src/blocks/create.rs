@@ -108,6 +108,10 @@ impl<D: Distribution<f32>, R: Router> Block for CreateBlock<D, R> {
         self.id
     }
 
+    fn kind(&self) -> &'static str {
+        "create"
+    }
+
     fn next(&self, blocks: &HashMap<BlockId, Box<dyn Block>>) -> Option<BlockId> {
         self.router.next(blocks)
     }
