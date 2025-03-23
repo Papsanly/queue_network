@@ -1,14 +1,4 @@
-mod blocks;
-mod devices;
-mod distributions;
-mod events;
-mod network;
-mod queue;
-mod routers;
-mod stats;
-mod weighted_average;
-
-use crate::{
+use queue_network::{
     blocks::{CreateBlock, DisposeBlock, ProcessBlock},
     devices::Devices,
     events::Event,
