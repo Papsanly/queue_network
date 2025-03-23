@@ -45,13 +45,14 @@ impl SharedQueuePool {
 
         drop(queues);
 
+        let mut event_id: Option<usize> = None;
         if let Some((_, max_length_queue)) = self
             .queues
             .borrow_mut()
             .iter_mut()
             .max_by_key(|(_, q)| q.length())
         {
-            max_length_queue.dequeue(simulation_duration);
+            event_id = Some(max_length_queue.dequeue(simulation_duration));
         };
 
         if let Some((_, min_length_queue)) = self
@@ -60,9 +61,11 @@ impl SharedQueuePool {
             .iter_mut()
             .min_by_key(|(_, q)| q.length())
         {
-            min_length_queue.enqueue(simulation_duration);
-        };
-
+            min_length_queue.enqueue(
+                event_id.expect("event id should be Some because max length queue is not empty"),
+                simulation_duration,
+            );
+        }
         true
     }
 
@@ -151,20 +154,22 @@ impl Queue for SharedQueue {
             .capacity()
     }
 
-    fn enqueue(&mut self, simulation_duration: Duration) {
+    fn enqueue(&mut self, event_id: usize, simulation_duration: Duration) {
         self.pool
             .queues
             .borrow_mut()
             .get_mut(self.block)
             .expect("queue should exist in shared queue pool")
-            .enqueue(simulation_duration);
+            .enqueue(event_id, simulation_duration);
         if self.pool.redistribute(simulation_duration) {
+            dbg!("redistributed!");
             self.transitions += 1;
         }
     }
 
-    fn dequeue(&mut self, simulation_duration: Duration) {
-        self.pool
+    fn dequeue(&mut self, simulation_duration: Duration) -> usize {
+        let event_id = self
+            .pool
             .queues
             .borrow_mut()
             .get_mut(self.block)
@@ -173,5 +178,6 @@ impl Queue for SharedQueue {
         if self.pool.redistribute(simulation_duration) {
             self.transitions += 1;
         }
+        event_id
     }
 }

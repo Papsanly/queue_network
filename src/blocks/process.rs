@@ -214,7 +214,7 @@ impl<D: Distribution<f32>, R: Router> Block for ProcessBlock<D, R> {
             return;
         };
         self.devices.unload(event_id, simulation_duration);
-        if queue.len() != 0 {
+        if queue.length() != 0 {
             let next_event_id = queue.dequeue(simulation_duration);
             self.devices.load(next_event_id, simulation_duration);
             event_queue.push(Event(
